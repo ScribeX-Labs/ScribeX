@@ -1,4 +1,9 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 __pycache__
 /node_modules
 >>>>>>> 08ae759 (intial commit | setup done)
+=======
+/node_modules
+.env
+>>>>>>> cd9637b (added few animes | api working now)
