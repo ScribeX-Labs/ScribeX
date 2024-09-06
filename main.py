@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from routes import oxalatl, anime, animals
+from routes import oxalotl, anime, animals
 
 app = FastAPI()
 
