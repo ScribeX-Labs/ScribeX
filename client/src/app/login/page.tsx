@@ -13,11 +13,7 @@ function Page() {
     }
   }, [user, router]);
 
-  return (
-    <div className="p-4">
-      <AuthPage />
-    </div>
-  );
+  return <AuthPage />;
 }
 
 export default Page;
