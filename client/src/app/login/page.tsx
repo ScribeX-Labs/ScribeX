@@ -1,11 +1,11 @@
 'use client';
-import { Button } from '@/components/ui/button';
+import AuthPage from '@/components/auth-page';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import React, { useEffect } from 'react';
 
 function Page() {
-  const { user, loginWithGoogle } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   useEffect(() => {
     if (user) {
@@ -15,7 +15,7 @@ function Page() {
 
   return (
     <div className="p-4">
-      <Button onClick={loginWithGoogle}>Login with Google</Button>
+      <AuthPage />
     </div>
   );
 }
