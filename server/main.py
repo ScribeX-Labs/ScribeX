@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from starlette.middleware.cors import CORSMiddleware
-
+from fastapi_devtools import DevTools
 
 # Define the lifespan event using @asynccontextmanager
 @asynccontextmanager
