@@ -8,6 +8,7 @@ export default function Home() {
       <h1 className="text-6xl font-bold">Scribe Home</h1>
       <Button asChild>
         <Link href="/login">Login</Link>
+        {/*<Link href="/profile">profile</Link>*/}
       </Button>
     </div>
   );
