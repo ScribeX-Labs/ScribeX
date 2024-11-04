@@ -11,7 +11,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     // console.log('user', user);
     // console.log('isLoading', isLoading);
     if (!isLoading && !user) {
-      router.push('/login');
+      //router.push('/login');
     }
   }, [user, router, isLoading]);
 
