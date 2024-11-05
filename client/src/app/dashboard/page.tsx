@@ -5,6 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import React, {useEffect} from 'react';
 
+/*
 const profilePage = () => {
   const { user } = useAuth();
   const router = useRouter();
@@ -15,6 +16,7 @@ const profilePage = () => {
   }, [user, router]);
 
 }
+*/
 
 function Page() {
   const { user, logout } = useAuth();
@@ -24,7 +26,7 @@ function Page() {
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-lg">Welcome, {user?.email}</p>
         <Button onClick={logout}>Logout</Button>
-        <Button onClick={profilePage}>Profile page</Button>
+        {/*<Button onClick={profilePage}>Profile page</Button>*/}
       </div>
     </div>
   );

@@ -28,7 +28,7 @@ const ProfileCard: FC<ProfileCardProps> = ({ name, email, university }) => (
         <label>University</label>
         <Input value={university} readOnly />
       </div>
-      <Button className="w-full mt-4">Edit Profile</Button>
+      <Button className="w-full mt-4" href="/profile/edit">Edit Profile</Button>
     </div>
   </div>
 )

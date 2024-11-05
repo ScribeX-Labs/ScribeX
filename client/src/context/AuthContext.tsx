@@ -15,6 +15,13 @@ import {
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
+interface User{
+  email: string;
+  password: string;
+  institution: string;
+  username: string;
+}
+
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
@@ -94,6 +101,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  //currently working on the deleting data function. work on this during class (?)
+  const deleteData = async = (tab: string) => {
+    //if (tab == )
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
@@ -101,6 +136,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
     return () => unsubscribe();
   }, [auth]);
+
 
   return (
     <AuthContext.Provider
