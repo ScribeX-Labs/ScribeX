@@ -19,14 +19,18 @@ const profilePage = () => {
 */
 
 function Page() {
-  const { user, logout } = useAuth();
+  const { user, logout, deleteSelf} = useAuth();
   return (
     <div className="p-4">
       <div className="">
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-lg">Welcome, {user?.email}</p>
         <Button onClick={logout}>Logout</Button>
-        {/*<Button onClick={profilePage}>Profile page</Button>*/}
+        <Button onClick={() => {
+          if(confirm("Are you sure you want to delete your account? This action cannot be undone.")){
+            deleteSelf()}
+          }}>Delete Account</Button>
+
       </div>
     </div>
   );

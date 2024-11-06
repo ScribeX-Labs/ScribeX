@@ -9,6 +9,7 @@ import { FC } from "react";
 
 const profilePage: FC = () => {
   const {user, logout} = useAuth();
+  
   return (
     <div className="container mx-auto p-4">
       <div className="flex flex-col md:flex-row gap-6">

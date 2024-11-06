@@ -15,13 +15,6 @@ import {
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 
-interface User{
-  email: string;
-  password: string;
-  institution: string;
-  username: string;
-}
-
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
@@ -29,6 +22,7 @@ interface AuthContextType {
   createUser: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
+  deleteSelf: () => Promise<void>
   isLoading: boolean;
 }
 
@@ -75,7 +69,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const result = await signInWithPopup(auth, provider);
       setUser(result.user);
       toast.success('Login with Google successful');
-      router.push('/dashboard');
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -101,7 +94,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const deleteSelf = async () => {
+    if (auth.currentUser) {
+      try {
+        await auth.currentUser.delete();
+        setUser(null);
+        toast.success("Account deleted successfully");
+        router.push('/login');
+      } catch (error: any) {
+        if (error.code === "auth/requires-recent-login") {
+          toast.error("Please re-authenticate to delete your account.");
+        } else {
+          toast.error("Failed to delete account");
+        }
+      }
+    } else {
+      toast.error("No user is currently signed in.");
+    }
+  };
 
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        createUser,
+        loginWithGoogle,
+        forgotPassword,
+        deleteSelf,  // Include deleteSelf in the context
+        isLoading,
+      }}
+    >
+      {isNoAuthRoute ? <>{children}</> : <ProtectedRoute>{children}</ProtectedRoute>}
+    </AuthContext.Provider>
+  );
+};
 
 
 
@@ -125,35 +161,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
 
   //currently working on the deleting data function. work on this during class (?)
-  const deleteData = async = (tab: string) => {
-    //if (tab == )
+
+  const deleteData = async (tab: string, item: number) => {
+    if(tab == "transcription"){
+
+    }else if(tab == "chats"){
+
+    }else{
+      console.log("there is nothing to delete")
+    }
   }
+  
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setIsLoading(false);
-    });
-    return () => unsubscribe();
-  }, [auth]);
-
-
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login,
-        logout,
-        createUser,
-        loginWithGoogle,
-        forgotPassword,
-        isLoading,
-      }}
-    >
-      {isNoAuthRoute ? <>{children}</> : <ProtectedRoute>{children}</ProtectedRoute>}
-    </AuthContext.Provider>
-  );
-};
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -162,3 +181,9 @@ export const useAuth = () => {
   }
   return context;
 };
+
+export const deleteAccount = () => {
+  const context = deleteSelf(AuthContext);
+  if(!context){}
+
+}
