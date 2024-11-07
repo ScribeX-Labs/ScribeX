@@ -13,7 +13,8 @@ import {
   User,
   sendPasswordResetEmail,
 } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { doc, deleteDoc } from "firebase/firestore";
+import { auth, db } from '../lib/firebase';
 
 interface AuthContextType {
   user: User | null;
@@ -22,7 +23,9 @@ interface AuthContextType {
   createUser: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
-  deleteSelf: () => Promise<void>
+  deleteSelf: () => Promise<void>;
+  deleteTranscription: (id: string) => Promise<void>;
+  deleteChat: (id: string) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -131,6 +134,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         loginWithGoogle,
         forgotPassword,
         deleteSelf,  // Include deleteSelf in the context
+        deleteTranscription, // this is used to deleteTranscription from database
+        deleteChat,
         isLoading,
       }}
     >
@@ -139,20 +144,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
 };
 
+const deleteTranscription = async (id: string) => {
+  try{
+    await deleteDoc(doc(db, "transcription", id));
+    toast.success("Transcription deleted successfully")
+  }catch(error){
+    console.error("Error deleting transcription", error);
+    toast.error("Fao;ed to delete transcription")
+  }
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+const deleteChat = async (id: string): Promise<void> => {
+  try{
+    const chatDocRef = doc(db, "chats", id);
+    await deleteDoc(chatDocRef);
+    console.log(`Chat with id ${id} deleted successfully`)
+  }catch(error){
+    console.error("Erorr deleting chat: ", error);
+    throw new Error("Failed to delete chat")
+  }
+}
 
 
 
