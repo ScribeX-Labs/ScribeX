@@ -12,8 +12,11 @@ import {
   onAuthStateChanged,
   User,
   sendPasswordResetEmail,
+  getAuth,
+  deleteUser
 } from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { doc, deleteDoc } from "firebase/firestore";
+import { auth, db } from '../lib/firebase';
 
 interface AuthContextType {
   user: User | null;
@@ -22,6 +25,9 @@ interface AuthContextType {
   createUser: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
+  deleteSelf: () => Promise<void>;
+  deleteTranscription: (id: string) => Promise<void>;
+  deleteChat: (id: string) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -68,7 +74,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const result = await signInWithPopup(auth, provider);
       setUser(result.user);
       toast.success('Login with Google successful');
-      router.push('/dashboard');
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -94,13 +99,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const deleteTranscription = async (id: string) => {
+    try{
+      await deleteDoc(doc(db, "transcription", id));
+      toast.success("Transcription deleted successfully")
+    }catch(error){
+      console.error("Error deleting transcription", error);
+      toast.error("Fao;ed to delete transcription")
+    }
+  }
+  
+  const deleteChat = async (id: string): Promise<void> => {
+    try{
+      const chatDocRef = doc(db, "chats", id);
+      await deleteDoc(chatDocRef);
+      console.log(`Chat with id ${id} deleted successfully`)
+    }catch(error){
+      console.error("Erorr deleting chat: ", error);
+      throw new Error("Failed to delete chat")
+    }
+  }
+
+  const deleteSelf = async () => {
+    try{
+      console.log("inside the try curly braces")
+      if (user) {
+        await deleteUser(user);
+        console.log("User deleted");
+      } else {
+        throw new Error("No user to delete");
+      }
+      console.log("User deleted")
+    }catch(error){
+      console.log("There is an error whilst attempting to delete user, ", error)
+    }
+  };
+
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setIsLoading(false);
     });
     return () => unsubscribe();
-  }, [auth]);
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -111,6 +153,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         createUser,
         loginWithGoogle,
         forgotPassword,
+        deleteSelf,  // Include deleteSelf in the context
+        deleteTranscription, // this is used to deleteTranscription from database
+        deleteChat,
         isLoading,
       }}
     >
@@ -118,6 +163,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
