@@ -1,5 +1,3 @@
-// app/profile/page.tsx
-// app/profile/page.tsx
 "use client";
 import ProfileCard from "@/components/ProfileCard";
 import TabbedContent from "@/components/TabbedContent";
@@ -12,9 +10,13 @@ const profilePage: FC = () => {
   
   return (
     <div className="container mx-auto p-4">
-      <div className="flex flex-col md:flex-row gap-6">
+      <div className="flex flex-col gap-6 md:flex-row">
         <aside className="w-full md:w-1/3">
-          <ProfileCard name={user?.name == null? "add username" : user?.name} email={user?.email} university={user?.school == null? "add school or work" : user?.school} />
+          <ProfileCard
+            name={user?.displayName == null ? 'add username' : user?.displayName}
+            email={user?.email ?? 'add email'}
+            university={'add school or work'}
+          />
         </aside>
         <main className="w-full md:w-2/3">
           <TabbedContent />

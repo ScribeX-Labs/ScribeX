@@ -123,7 +123,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const deleteSelf = async () => {
     try{
       console.log("inside the try curly braces")
-      await deleteUser(user);
+      if (user) {
+        await deleteUser(user);
+        console.log("User deleted");
+      } else {
+        throw new Error("No user to delete");
+      }
       console.log("User deleted")
     }catch(error){
       console.log("There is an error whilst attempting to delete user, ", error)
