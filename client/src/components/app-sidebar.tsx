@@ -21,7 +21,7 @@ const items = [
   },
   {
     title: 'Account Management',
-    url: '/dashboard/account',
+    url: '/dashboard/profile',
     icon: Settings,
   },
   {
