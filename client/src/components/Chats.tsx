@@ -11,13 +11,14 @@ type ChatItem = {
 }
 
 const chatData: ChatItem[] = [
+  /*
   {id: "1", title: "Data Structure Q&A", lastActive: "2 hours ago"},
   {id: "2", title: "Algorithm Analysis Discussion", lastActive: "1 day ago"},
   {id: "3", title: "Algorithm Analysis Discussion", lastActive: "1 day ago"},
   {id: "4", title: "Algorithm Analysis Discussion", lastActive: "1 day ago"},
   {id: "5", title: "Algorithm Analysis Discussion", lastActive: "1 day ago"},
   {id: "6", title: "Algorithm Analysis Discussion", lastActive: "1 day ago"},
-
+  */
 ]
 
 const Chats: FC = () => {

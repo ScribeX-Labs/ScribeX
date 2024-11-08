@@ -13,12 +13,13 @@ type TranscriptionItem = {
 }
 
 const transcriptionData: TranscriptionItem[] =  [
+  /*
   {id: "1", type: "audio", title: "Lecture on Data Structures", date: "May 15, 2023"},
-  {id: "2", type: "video", title: "Algorithm Analysis Tutorial", date: "May 10, 2023"},  
+  {id: "2", type: "video", title: "Algorithm Analysis Tutorial", date: "May 10, 2023"}, */ 
 ]
-/*
 
-*/
+
+
 
 const Transcriptions: FC = () => {
   const { deleteTranscription } = useAuth();
