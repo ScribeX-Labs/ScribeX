@@ -20,10 +20,10 @@ const profilePage = () => {
 function Page() {
   const { user, logout, deleteSelf} = useAuth();
 
-  const handleDeleteSelf = async (/*password: string*/) => {
+  const handleDeleteSelf = async (password: string) => {
     try {
       
-      await deleteSelf("PUc16pDV8tR/5(XszH*"); // call deleteSelf to delete the user account
+      await deleteSelf(password); // call deleteSelf to delete the user account
     } catch (error) {
       console.error("Error deleting account: ", error);
     }
