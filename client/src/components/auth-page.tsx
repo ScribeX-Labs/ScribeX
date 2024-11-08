@@ -8,15 +8,45 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/AuthContext';
 
+interface FormErrors {
+  email?: string;
+  password?: string;
+}
+
 export default function AuthPage() {
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
   const { login, createUser, loginWithGoogle, forgotPassword, isLoading } = useAuth();
+
+  const validateForm = (email: string, password?: string): FormErrors => {
+    const errors: FormErrors = {};
+
+    if (!email) {
+      errors.email = 'Email is required';
+    } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(email)) {
+      errors.email = 'Invalid email format';
+    }
+
+    if (password === '') {
+      errors.password = 'Password is required';
+    }
+
+    return errors;
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
+
+    const validationErrors = validateForm(email, password);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setErrors({});
 
     if (event.currentTarget.id === 'signin-form') {
       await login(email, password);
@@ -31,7 +61,15 @@ export default function AuthPage() {
     <form id="forgot-password-form" onSubmit={handleSubmit}>
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" placeholder="m@example.com" required />
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          data-testid="email-input"
+          placeholder="m@example.com"
+          required
+        />
+        {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
       </div>
       <Button className="mt-4 w-full" type="submit" disabled={isLoading}>
         {isLoading ? 'Processing...' : 'Reset Password'}
@@ -46,11 +84,26 @@ export default function AuthPage() {
     <form id="signin-form" onSubmit={handleSubmit}>
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" placeholder="m@example.com" required />
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          data-testid="email-input"
+          placeholder="m@example.com"
+          required
+        />
+        {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
       </div>
       <div className="mt-4 space-y-2">
         <Label htmlFor="password">Password</Label>
-        <Input id="password" name="password" type="password" required />
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          data-testid="password-input"
+          required
+        />
+        {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
       </div>
       <Button className="mt-4 w-full" type="submit" disabled={isLoading}>
         {isLoading ? 'Signing In...' : 'Sign In'}
@@ -76,11 +129,26 @@ export default function AuthPage() {
     <form id="signup-form" onSubmit={handleSubmit}>
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
-        <Input id="email" name="email" type="email" placeholder="m@example.com" required />
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          data-testid="email-input"
+          placeholder="m@example.com"
+          required
+        />
+        {errors.email && <p className="text-sm text-red-500">{errors.email}</p>}
       </div>
       <div className="mt-4 space-y-2">
         <Label htmlFor="password">Password</Label>
-        <Input id="password" name="password" type="password" required />
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          data-testid="password-input"
+          required
+        />
+        {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
       </div>
       <Button className="mt-4 w-full" type="submit" disabled={isLoading}>
         {isLoading ? 'Signing Up...' : 'Sign Up'}
