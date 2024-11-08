@@ -1,0 +1,35 @@
+services:
+  client:
+    build: ./client
+    container_name: nextjs_client
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client:/app
+    command: ["pnpm", "run", "dev"]  # Start in development mode with hot-reload
+    env_file:
+      - .env
+    depends_on:
+      - server  # Ensure server is up before frontend starts
+    networks:
+      - scribe_network
+
+  server:
+    build: ./server
+    container_name: fastapi_server
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./server:/app
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]  # Hot-reload for FastAPI
+    env_file:
+      - .env
+    networks:
+      - scribe_network
+
+
+networks:
+  scribe_network:
+    driver: bridge
