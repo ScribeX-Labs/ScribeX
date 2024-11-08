@@ -26,10 +26,9 @@ const TabbedContent: FC = () => {
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab}>
-      <TabsList className="grid w-full grid-cols-3">
+      <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="transcriptions">Transcriptions</TabsTrigger>
         <TabsTrigger value="chats">Chats</TabsTrigger>
-        <TabsTrigger value="upload">Upload</TabsTrigger>
       </TabsList>
 
       <TabsContent value="transcriptions">
@@ -39,12 +38,19 @@ const TabbedContent: FC = () => {
       <TabsContent value="chats">
         <Chats />
       </TabsContent>
-
-      <TabsContent value="upload">
-        <UploadContent />
-      </TabsContent>
+      
     </Tabs>
   )
 }
 
 export default TabbedContent
+
+
+{
+  /* 
+  <TabsContent value="upload">
+        <UploadContent />
+      </TabsContent>
+    </Tabs>
+  */
+}

@@ -12,8 +12,7 @@ import {
   onAuthStateChanged,
   User,
   sendPasswordResetEmail,
-  reauthenticateWithCredential,
-  EmailAuthProvider,
+  getAuth,
   deleteUser
 } from 'firebase/auth';
 import { doc, deleteDoc } from "firebase/firestore";
@@ -26,7 +25,7 @@ interface AuthContextType {
   createUser: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
-  deleteSelf: (password: string) => Promise<void>;
+  deleteSelf: () => Promise<void>;
   deleteTranscription: (id: string) => Promise<void>;
   deleteChat: (id: string) => Promise<void>;
   isLoading: boolean;
@@ -121,37 +120,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  const deleteSelf = async (password: string) => {
-    if (!user) {
-      toast.error("No user is signed in");
-      console.log("No user is signed in")
-      return;
-    }
-    
-    const currentUser = auth.currentUser;
-    try {
-      // Re-authenticate the user
-      console.log("inside the try portion of this")
-      const credential = EmailAuthProvider.credential(currentUser?.email, password);
-      console.log("Email of user", currentUser?.email)
-      console.log("Credentials was defined", credential)
-      await reauthenticateWithCredential(currentUser, credential);
-
-      console.log("Authenticated with credentials")
-  
-      // Delete user from Firestore (if you store user data in Firestore)
-      await deleteDoc(doc(db, "users", user.uid)); // Adjust this path based on your Firestore structure
-  
-      // Delete user from Firebase Authentication
+  const deleteSelf = async () => {
+    try{
+      console.log("inside the try curly braces")
       await deleteUser(user);
-  
-      // Set user to null and navigate to a different page
-      setUser(null);
-      toast.success("Account deleted successfully");
-      router.push("/signup");
-    } catch (error) {
-      console.error("Error deleting user: ", error);
-      toast.error("Failed to delete account");
+      console.log("User deleted")
+    }catch(error){
+      console.log("There is an error whilst attempting to delete user, ", error)
     }
   };
 
