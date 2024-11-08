@@ -12,6 +12,9 @@ import {
   onAuthStateChanged,
   User,
   sendPasswordResetEmail,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  deleteUser
 } from 'firebase/auth';
 import { doc, deleteDoc } from "firebase/firestore";
 import { auth, db } from '../lib/firebase';
@@ -23,7 +26,7 @@ interface AuthContextType {
   createUser: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
-  deleteSelf: () => Promise<void>;
+  deleteSelf: (password: string) => Promise<void>;
   deleteTranscription: (id: string) => Promise<void>;
   deleteChat: (id: string) => Promise<void>;
   isLoading: boolean;
@@ -97,24 +100,61 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const deleteSelf = async () => {
-    if (auth.currentUser) {
-      try {
-        await auth.currentUser.delete();
-        setUser(null);
-        toast.success("Account deleted successfully");
-        router.push('/login');
-      } catch (error: any) {
-        if (error.code === "auth/requires-recent-login") {
-          toast.error("Please re-authenticate to delete your account.");
-        } else {
-          toast.error("Failed to delete account");
-        }
-      }
-    } else {
-      toast.error("No user is currently signed in.");
+  const deleteTranscription = async (id: string) => {
+    try{
+      await deleteDoc(doc(db, "transcription", id));
+      toast.success("Transcription deleted successfully")
+    }catch(error){
+      console.error("Error deleting transcription", error);
+      toast.error("Fao;ed to delete transcription")
+    }
+  }
+  
+  const deleteChat = async (id: string): Promise<void> => {
+    try{
+      const chatDocRef = doc(db, "chats", id);
+      await deleteDoc(chatDocRef);
+      console.log(`Chat with id ${id} deleted successfully`)
+    }catch(error){
+      console.error("Erorr deleting chat: ", error);
+      throw new Error("Failed to delete chat")
+    }
+  }
+
+  const deleteSelf = async (password: string) => {
+    if (!user) {
+      toast.error("No user is signed in");
+      console.log("No user is signed in")
+      return;
+    }
+    
+    const currentUser = auth.currentUser;
+    try {
+      // Re-authenticate the user
+      console.log("inside the try portion of this")
+      const credential = EmailAuthProvider.credential(currentUser?.email, password);
+      console.log("Email of user", currentUser?.email)
+      console.log("Credentials was defined", credential)
+      await reauthenticateWithCredential(currentUser, credential);
+
+      console.log("Authenticated with credentials")
+  
+      // Delete user from Firestore (if you store user data in Firestore)
+      await deleteDoc(doc(db, "users", user.uid)); // Adjust this path based on your Firestore structure
+  
+      // Delete user from Firebase Authentication
+      await deleteUser(user);
+  
+      // Set user to null and navigate to a different page
+      setUser(null);
+      toast.success("Account deleted successfully");
+      router.push("/signup");
+    } catch (error) {
+      console.error("Error deleting user: ", error);
+      toast.error("Failed to delete account");
     }
   };
+
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -143,46 +183,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-
-const deleteTranscription = async (id: string) => {
-  try{
-    await deleteDoc(doc(db, "transcription", id));
-    toast.success("Transcription deleted successfully")
-  }catch(error){
-    console.error("Error deleting transcription", error);
-    toast.error("Fao;ed to delete transcription")
-  }
-}
-
-const deleteChat = async (id: string): Promise<void> => {
-  try{
-    const chatDocRef = doc(db, "chats", id);
-    await deleteDoc(chatDocRef);
-    console.log(`Chat with id ${id} deleted successfully`)
-  }catch(error){
-    console.error("Erorr deleting chat: ", error);
-    throw new Error("Failed to delete chat")
-  }
-}
-
-
-
-
-
-
-
-  //currently working on the deleting data function. work on this during class (?)
-
-  const deleteData = async (tab: string, item: number) => {
-    if(tab == "transcription"){
-
-    }else if(tab == "chats"){
-
-    }else{
-      console.log("there is nothing to delete")
-    }
-  }
-  
 
 
 export const useAuth = () => {
