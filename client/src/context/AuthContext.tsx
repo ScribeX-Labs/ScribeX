@@ -192,9 +192,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-export const deleteAccount = () => {
-  const context = deleteSelf(AuthContext);
-  if(!context){}
-
-}
