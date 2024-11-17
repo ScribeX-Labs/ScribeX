@@ -1,4 +1,3 @@
-// __tests__/AuthPage.test.tsx
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AuthPage from '@/components/auth-page';
@@ -26,7 +25,7 @@ describe('AuthPage', () => {
     render(<AuthPage />);
     expect(screen.getByTestId('email-input')).toBeInTheDocument();
     expect(screen.getByTestId('password-input')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByTestId('signin-submit')).toBeInTheDocument();
   });
 
   it('handles valid email and password (Test Case 1)', async () => {
@@ -34,7 +33,7 @@ describe('AuthPage', () => {
     render(<AuthPage />);
     await user.type(screen.getByTestId('email-input'), 'valid@example.com');
     await user.type(screen.getByTestId('password-input'), 'validPassword123');
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
+    await user.click(screen.getByTestId('signin-submit'));
 
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith('valid@example.com', 'validPassword123');
@@ -42,28 +41,27 @@ describe('AuthPage', () => {
   });
 
   it('handles valid email and invalid password (Test Case 2)', async () => {
-    mockLogin.mockRejectedValue(new Error('Incorrect Password.'));
+    mockLogin.mockRejectedValueOnce(new Error('Incorrect Password'));
     const user = userEvent.setup();
     render(<AuthPage />);
     await user.type(screen.getByTestId('email-input'), 'valid@example.com');
     await user.type(screen.getByTestId('password-input'), 'wrongPassword');
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
+    await user.click(screen.getByTestId('signin-submit'));
 
     await waitFor(() => {
-      expect(screen.getByText(/incorrect password/i)).toBeInTheDocument();
+      expect(screen.getByTestId('password-error')).toHaveTextContent('Incorrect Password');
     });
   });
 
   it('handles invalid email and valid password (Test Case 3)', async () => {
-    mockLogin.mockRejectedValue(new Error('User not found.'));
     const user = userEvent.setup();
     render(<AuthPage />);
     await user.type(screen.getByTestId('email-input'), 'invalid@example');
     await user.type(screen.getByTestId('password-input'), 'validPassword123');
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
+    await user.click(screen.getByTestId('signin-submit'));
 
     await waitFor(() => {
-      expect(screen.getByText(/user not found/i)).toBeInTheDocument();
+      expect(screen.getByTestId('email-error')).toHaveTextContent('Invalid email format');
     });
   });
 
@@ -71,10 +69,10 @@ describe('AuthPage', () => {
     const user = userEvent.setup();
     render(<AuthPage />);
     await user.type(screen.getByTestId('email-input'), 'valid@example.com');
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
+    await user.click(screen.getByTestId('signin-submit'));
 
     await waitFor(() => {
-      expect(screen.getByText(/password cannot be empty/i)).toBeInTheDocument();
+      expect(screen.getByTestId('password-error')).toHaveTextContent('Password is required');
     });
   });
 
@@ -82,10 +80,10 @@ describe('AuthPage', () => {
     const user = userEvent.setup();
     render(<AuthPage />);
     await user.type(screen.getByTestId('password-input'), 'validPassword123');
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
+    await user.click(screen.getByTestId('signin-submit'));
 
     await waitFor(() => {
-      expect(screen.getByText(/email is required/i)).toBeInTheDocument();
+      expect(screen.getByTestId('email-error')).toHaveTextContent('Email is required');
     });
   });
 });
