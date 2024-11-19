@@ -51,6 +51,10 @@ def get_audio_duration(file_path: str) -> float:
 
 
 async def validate_media_file(file: UploadFile, testing_mode: bool = False) -> None:
+    """Validate uploaded media file."""
+    if not file:
+        raise HTTPException(status_code=400, detail="File size is required.")
+
     # Validate file type
     if not (
         file.content_type.startswith("audio/") or file.content_type.startswith("video/")
@@ -60,53 +64,56 @@ async def validate_media_file(file: UploadFile, testing_mode: bool = False) -> N
             detail="Invalid file type. Only audio and video files are allowed.",
         )
 
-    # Check file size
-    file_size = 0
-    chunk_size = 1024 * 1024  # 1 MB
-    content = b""
+    # Check file size first
+    file_contents = await file.read()
+    file_size = len(file_contents)
 
-    while True:
-        chunk = await file.read(chunk_size)
-        if not chunk:
-            break
-        content += chunk
-        file_size += len(chunk)
-        if file_size > MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=400,
-                detail=f"File size exceeds the limit of {MAX_FILE_SIZE / (1024 * 1024):.0f} MB",
-            )
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File size exceeds {MAX_FILE_SIZE / (1024 * 1024):.0f} MB limit",
+        )
 
-    # Skip duration check in testing mode
-    if not testing_mode:
-        # Create temporary file for duration check
-        with tempfile.NamedTemporaryFile(
-            delete=False, suffix=os.path.splitext(file.filename)[1]
-        ) as temp_file:
-            temp_file.write(content)
-            temp_file_path = temp_file.name
+    # Create temporary file for duration check
+    with tempfile.NamedTemporaryFile(
+        delete=False, suffix=os.path.splitext(file.filename)[1]
+    ) as temp_file:
+        temp_file.write(file_contents)
+        temp_file_path = temp_file.name
 
+    try:
+        # Check duration based on file type
+        duration = None
         try:
-            # Check duration based on file type
-            duration = 0
             if file.content_type.startswith("video/"):
                 with VideoFileClip(temp_file_path) as video:
                     duration = video.duration
             elif file.content_type.startswith("audio/"):
                 duration = get_audio_duration(temp_file_path)
+        except Exception as e:
+            print(f"Error reading duration: {str(e)}")
+            duration = None
 
-            if duration > MAX_DURATION_SECONDS:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Media duration exceeds the limit of {MAX_DURATION_SECONDS / 60:.0f} minutes",
-                )
+        if duration is None:
+            raise HTTPException(status_code=400, detail="File duration is required.")
 
-        finally:
-            # Clean up temporary file
+        if duration > MAX_DURATION_SECONDS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File duration exceeds {MAX_DURATION_SECONDS / 60:.0f}-minute limit",
+            )
+
+    finally:
+        # Clean up temporary file
+        try:
             os.unlink(temp_file_path)
+        except:
+            pass
+        # Reset file position for subsequent operations
+        file.file.seek(0)
 
-    # Reset file position for subsequent operations
-    file.file.seek(0)
+    # Reset file position after reading
+    await file.seek(0)
 
 
 @asynccontextmanager
@@ -137,8 +144,9 @@ async def read_root():
 async def upload_media(user_id: str, file: UploadFile = File(...)):
     print(f"Uploading file: {file.filename}")
     print(f"User ID: {user_id}")
+    print(f"Testing mode: {TESTING_MODE}")
 
-    # Validate file type and size/duration
+    # Pass testing mode to validate_media_file
     await validate_media_file(file, testing_mode=TESTING_MODE)
 
     unique_filename = f"{uuid.uuid4()}_{file.filename}"
@@ -146,6 +154,13 @@ async def upload_media(user_id: str, file: UploadFile = File(...)):
     s3_path = f"{user_id}/{media_type}/{unique_filename}"
 
     try:
+        # For testing mode, skip actual upload and return mock response
+        if TESTING_MODE:
+            return {
+                "filename": unique_filename,
+                "file_url": f"http://test-url/{s3_path}",
+            }
+
         # Upload file to S3
         upload_file_to_s3(file.file, s3_path, file.content_type)
 
