@@ -9,8 +9,10 @@ on:
       - main
 
 jobs:
-  fastapi-tests:
+  unit-tests:
     runs-on: ubuntu-latest
+    env:
+      DOTENV: ".env"
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -21,15 +23,17 @@ jobs:
           python-version: '3.9'
 
       - name: Install dependencies
+        working-directory: ./server 
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-asyncio httpx
 
       - name: Run FastAPI Tests
-        run: pytest test_main.py  # Adjusted to run `test_main.py`
+        working-directory: ./server
+        run: pytest test_main.py
 
-  react-tests:
+  ui-tests:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -41,7 +45,9 @@ jobs:
           node-version: '18'
 
       - name: Install dependencies
+        working-directory: ./client
         run: npm install
 
       - name: Run React Component Tests
+        working-directory: ./client
         run: npm test
