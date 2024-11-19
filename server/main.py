@@ -1,4 +1,3 @@
-# main.py
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from contextlib import asynccontextmanager
 from starlette.middleware.cors import CORSMiddleware
@@ -7,13 +6,21 @@ from firebase_admin import credentials, firestore
 import uuid
 import os
 from dotenv import load_dotenv
+import tempfile
+from moviepy.editor import VideoFileClip
+from mutagen import File as MutagenFile
 
 from aws_service import (
     upload_file_to_s3,
     generate_presigned_url,
-)  # Import AWS functions
+)
 
-load_dotenv()  # Load environment variables from .env
+load_dotenv()
+
+# Configuration constants
+MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB in bytes
+MAX_DURATION_SECONDS = 120  # 2 minutes in seconds
+TESTING_MODE = False  # Global flag for testing mode
 
 # Firebase configuration from .env variables
 firebase_credentials = {
@@ -34,8 +41,72 @@ cred = credentials.Certificate(firebase_credentials)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# File size limit
-MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB in bytes
+
+def get_audio_duration(file_path: str) -> float:
+    """Get audio file duration using mutagen."""
+    audio = MutagenFile(file_path)
+    if audio is None:
+        raise ValueError("Could not determine audio file duration")
+    return audio.info.length
+
+
+async def validate_media_file(file: UploadFile, testing_mode: bool = False) -> None:
+    # Validate file type
+    if not (
+        file.content_type.startswith("audio/") or file.content_type.startswith("video/")
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file type. Only audio and video files are allowed.",
+        )
+
+    # Check file size
+    file_size = 0
+    chunk_size = 1024 * 1024  # 1 MB
+    content = b""
+
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        content += chunk
+        file_size += len(chunk)
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File size exceeds the limit of {MAX_FILE_SIZE / (1024 * 1024):.0f} MB",
+            )
+
+    # Skip duration check in testing mode
+    if not testing_mode:
+        # Create temporary file for duration check
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=os.path.splitext(file.filename)[1]
+        ) as temp_file:
+            temp_file.write(content)
+            temp_file_path = temp_file.name
+
+        try:
+            # Check duration based on file type
+            duration = 0
+            if file.content_type.startswith("video/"):
+                with VideoFileClip(temp_file_path) as video:
+                    duration = video.duration
+            elif file.content_type.startswith("audio/"):
+                duration = get_audio_duration(temp_file_path)
+
+            if duration > MAX_DURATION_SECONDS:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Media duration exceeds the limit of {MAX_DURATION_SECONDS / 60:.0f} minutes",
+                )
+
+        finally:
+            # Clean up temporary file
+            os.unlink(temp_file_path)
+
+    # Reset file position for subsequent operations
+    file.file.seek(0)
 
 
 @asynccontextmanager
@@ -66,36 +137,17 @@ async def read_root():
 async def upload_media(user_id: str, file: UploadFile = File(...)):
     print(f"Uploading file: {file.filename}")
     print(f"User ID: {user_id}")
-    # Validate file type
-    if not (
-        file.content_type.startswith("audio/") or file.content_type.startswith("video/")
-    ):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid file type. Only audio and video files are allowed.",
-        )
+
+    # Validate file type and size/duration
+    await validate_media_file(file, testing_mode=TESTING_MODE)
 
     unique_filename = f"{uuid.uuid4()}_{file.filename}"
     media_type = "audio" if file.content_type.startswith("audio/") else "video"
-    s3_path = f"{user_id}/{media_type}/{unique_filename}"  # Path with user ID
+    s3_path = f"{user_id}/{media_type}/{unique_filename}"
 
     try:
-        # Calculate file size and validate
-        file_size = 0
-        chunk_size = 1024 * 1024  # 1 MB
-        while True:
-            chunk = file.file.read(chunk_size)
-            if not chunk:
-                break
-            file_size += len(chunk)
-            if file_size > MAX_FILE_SIZE:
-                raise HTTPException(
-                    status_code=400, detail="File size exceeds the limit of 500 MB."
-                )
-        file.file.seek(0)  # Reset file pointer
-
-        # Use the AWS service module to upload the file
-        upload_file_to_s3(file.file, s3_path, file.content_type)  # Pass the full path
+        # Upload file to S3
+        upload_file_to_s3(file.file, s3_path, file.content_type)
 
         # Generate presigned URL
         file_url = generate_presigned_url(s3_path)
@@ -119,7 +171,5 @@ async def upload_media(user_id: str, file: UploadFile = File(...)):
 
         return {"filename": unique_filename, "file_url": file_url}
 
-    except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
