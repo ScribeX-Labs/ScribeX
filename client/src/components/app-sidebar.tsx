@@ -15,44 +15,14 @@ import Link from 'next/link';
 // Menu items.
 const items = [
   {
-    title: 'Overview',
+    title: 'Your Files',
     url: '/dashboard',
     icon: Home,
   },
   {
-    title: 'Account Management',
+    title: 'Profile',
     url: '/dashboard/profile',
     icon: Settings,
-  },
-  {
-    title: 'File Management',
-    url: '/dashboard/files',
-    icon: FileText,
-  },
-  {
-    title: 'Transcription Services',
-    url: '/dashboard/transcriptions',
-    icon: Bell,
-  },
-  {
-    title: 'Sharing & Collaboration',
-    url: '/dashboard/sharing',
-    icon: Share2,
-  },
-  {
-    title: 'Content Insights',
-    url: '/dashboard/insights',
-    icon: Brain,
-  },
-  {
-    title: 'System Management',
-    url: '/dashboard/system',
-    icon: Settings,
-  },
-  {
-    title: 'Export & Download',
-    url: '/dashboard/export',
-    icon: Download,
   },
 ];
 
@@ -61,7 +31,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Dashboard</SidebarGroupLabel>
+          <SidebarGroupLabel>Scribe</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (

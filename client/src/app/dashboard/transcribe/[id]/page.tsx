@@ -99,7 +99,7 @@ function Page({ params: { id } }: { params: { id: string } }) {
   useEffect(() => {
     getFileById(id).then((data) => setFileData(data));
     if (text && !currentTextId) {
-      // uploadText(text);
+      uploadText(text);
     }
   }, [text]);
 
