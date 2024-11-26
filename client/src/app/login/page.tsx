@@ -1,5 +1,6 @@
 'use client';
 import AuthPage from '@/components/auth-page';
+import Navbar from '@/components/navbar';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import React, { useEffect } from 'react';
@@ -13,7 +14,12 @@ function Page() {
     }
   }, [user, router]);
 
-  return <AuthPage />;
+  return (
+    <>
+      <Navbar />
+      <AuthPage />
+    </>
+  );
 }
 
 export default Page;

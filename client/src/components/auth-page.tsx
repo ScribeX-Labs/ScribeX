@@ -267,7 +267,7 @@ export default function AuthPage() {
   );
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
+    <div className="flex min-h-screen items-center justify-center">
       <Card className="w-[350px]">
         <CardHeader>
           <CardTitle>{isForgotPassword ? 'Reset Password' : 'Welcome'}</CardTitle>
