@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import tempfile
 from moviepy.editor import VideoFileClip
 from mutagen import File as MutagenFile
-
+from ai import ai_router
 from aws_service import (
     upload_file_to_s3,
     generate_presigned_url,
@@ -132,6 +132,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(ai_router, prefix="/ai")
 
 @app.get("/")
 async def read_root():
