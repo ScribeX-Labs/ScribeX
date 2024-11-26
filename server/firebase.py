@@ -1,6 +1,10 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Firebase configuration from .env variables
 firebase_credentials = {
