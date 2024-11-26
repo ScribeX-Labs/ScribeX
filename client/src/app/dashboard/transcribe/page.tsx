@@ -1,12 +1,12 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { Bot, Download, Share, FileOutput } from 'lucide-react'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { StatusInfoDialog } from "@/components/status-info-dialog"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { StarRating } from "@/components/star-rating"
+import { useState, useEffect } from 'react';
+import { Bot, Download, Share, FileOutput } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { StatusInfoDialog } from '@/components/status-info-dialog';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { StarRating } from '@/components/star-rating';
 import {
   Dialog,
   DialogContent,
@@ -14,48 +14,156 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from '@/components/ui/dialog';
 
-export default function Home() {
-  const [status, setStatus] = useState<'success' | 'processing' | 'failed'>('success')
-  const [text, setText] = useState<string>('')
-  const [isChatOpen, setIsChatOpen] = useState(false)
-  const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'bot', content: string }>>([])
-  const [inputMessage, setInputMessage] = useState('')
-  const [isRatingOpen, setIsRatingOpen] = useState(false)
-  const [transcriptRating, setTranscriptRating] = useState(0)
+interface Message {
+  role: 'user' | 'bot';
+  content: string;
+}
 
-  const handleAction = (action: string) => {
-    // Simulate processing without changing the status
-    console.log(`${action} action triggered`)
-  }
+interface ChatResponse {
+  answer: string;
+  text_id: string;
+}
 
-  const toggleChat = () => {
-    setIsChatOpen(!isChatOpen)
-  }
+export default function Transcribe() {
+  const [status, setStatus] = useState<'success' | 'processing' | 'failed'>('success');
+  const [text, setText] = useState<string>(
+    'Heading into the school year as an educator is stressful enough. If you are worried about what to do about students using popular and increasingly powerful AI tools like ChatGPT for their academic assignments, we’re here to help navigate the big questions: What should I be doing about AI? How do I teach critical thinking and learning in the era of AI homework helpers?\n\nWe’ve collected practical guidance from top educational sources and our own research on teaching responsibly with AI content detection. This guide includes material for educators in both K-12 and higher education, to help you decide how to approach teaching and evaluating AI use in your classroom.',
+  );
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Message[]>([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isRatingOpen, setIsRatingOpen] = useState(false);
+  const [transcriptRating, setTranscriptRating] = useState(0);
+  const [currentTextId, setCurrentTextId] = useState('text_20241126_010249');
 
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (inputMessage.trim()) {
-      setChatMessages([...chatMessages, { role: 'user', content: inputMessage }])
-      setInputMessage('')
-      // Simulate bot response
-      setTimeout(() => {
-        setChatMessages(prev => [...prev, { role: 'bot', content: 'This is a simulated response.' }])
-      }, 1000)
+  // Function to upload initial text
+  const uploadText = async (text: string) => {
+    try {
+      const response = await fetch('http://localhost:8000/ai/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: text,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to upload text');
+
+      const data = await response.json();
+      setCurrentTextId(data.text_id);
+      return data.text_id;
+    } catch (error) {
+      console.error('Error uploading text:', error);
+      setStatus('failed');
+      return null;
     }
-  }
+  };
+
+  // Upload text when it changes
+  useEffect(() => {
+    if (text && !currentTextId) {
+      uploadText(text);
+    }
+    loadChatHistory(currentTextId);
+  }, [text]);
+
+  // Function to send message to AI
+  const sendMessageToAI = async (message: string): Promise<string> => {
+    try {
+      if (!currentTextId) {
+        throw new Error('No text ID available');
+      }
+
+      const response = await fetch('http://localhost:8000/ai/ask', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text_id: currentTextId,
+          question: message,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to get AI response');
+
+      const data: ChatResponse = await response.json();
+      return data.answer;
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      return 'Sorry, I encountered an error processing your request.';
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inputMessage.trim()) {
+      // Add user message immediately
+      setChatMessages((prev) => [...prev, { role: 'user', content: inputMessage }]);
+      setInputMessage('');
+      setStatus('processing');
+
+      // Get AI response
+      const aiResponse = await sendMessageToAI(inputMessage);
+
+      // Add AI response to chat
+      setChatMessages((prev) => [...prev, { role: 'bot', content: aiResponse }]);
+      setStatus('success');
+    }
+  };
+
+  const handleAction = async (action: string) => {
+    if (action === 'Share' && currentTextId) {
+      try {
+        const response = await fetch(`http://localhost:8000/ai/conversation/${currentTextId}`);
+        if (!response.ok) throw new Error('Failed to get conversation history');
+        const data = await response.json();
+        console.log('Conversation history:', data);
+        // Here you could implement sharing functionality
+      } catch (error) {
+        console.error('Error getting conversation history:', error);
+      }
+    }
+  };
+
+  const loadChatHistory = async (textId: string) => {
+    try {
+      setStatus('processing');
+      const response = await fetch(`http://localhost:8000/ai/conversation/${textId}`);
+
+      if (!response.ok) throw new Error('Failed to load chat history');
+
+      const data = await response.json();
+
+      // Convert the conversation history format to match our Message interface
+      const formattedMessages: Message[] = data.conversation.flatMap((entry: any) => [
+        { role: 'user', content: entry.question },
+        { role: 'bot', content: entry.answer },
+      ]);
+
+      setChatMessages(formattedMessages);
+      setText(data.text); // Set the original text content
+      setStatus('success');
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+      setStatus('failed');
+    }
+  };
 
   const handleRate = (rating: number) => {
-    setTranscriptRating(rating)
-    // Here you would typically send the rating to your backend
-    console.log(`Transcript rated: ${rating} stars`)
-  }
+    setTranscriptRating(rating);
+    // Here you could send the rating to your backend
+    console.log(`Transcript rated: ${rating} stars`);
+  };
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <div className="w-full max-w-5xl space-y-4">
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
           <div className="flex space-x-2">
             <Button onClick={() => handleAction('Download')} aria-label="Download">
               <Download className="mr-2 h-4 w-4" />
@@ -69,7 +177,10 @@ export default function Home() {
               <Share className="mr-2 h-4 w-4" />
               Share
             </Button>
-            <Button onClick={() => handleAction('Export with captions')} aria-label="Export with captions">
+            <Button
+              onClick={() => handleAction('Export with captions')}
+              aria-label="Export with captions"
+            >
               <FileOutput className="mr-2 h-4 w-4" />
               Export w/ captions
             </Button>
@@ -77,11 +188,11 @@ export default function Home() {
           <ThemeToggle />
         </div>
         <textarea
-          className="w-full h-96 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-background text-foreground"
+          className="h-96 w-full resize-none rounded-lg border border-gray-300 bg-background p-4 text-foreground focus:border-transparent focus:ring-2 focus:ring-blue-500"
           value={text}
-          readOnly
-          placeholder="Text will appear here..."
-          aria-label="Content display area"
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Paste or type your text here..."
+          aria-label="Content input area"
         />
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <div className="flex items-center">
@@ -113,36 +224,42 @@ export default function Home() {
       </div>
       <div className="fixed bottom-5 right-5 flex flex-col items-end">
         {isChatOpen && (
-          <div className="mb-4 w-80 bg-background border border-border rounded-lg shadow-lg overflow-hidden">
-            <div className="bg-primary text-primary-foreground p-3 font-bold">Chat with AI</div>
-            <div className="h-64 overflow-y-auto p-4 space-y-2">
+          <div className="mb-4 w-80 overflow-hidden rounded-lg border border-border bg-background shadow-lg">
+            <div className="bg-primary p-3 font-bold text-primary-foreground">Chat with AI</div>
+            <div className="h-64 space-y-2 overflow-y-auto p-4">
               {chatMessages.map((msg, index) => (
                 <div key={index} className={`${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                  <span className={`inline-block p-2 rounded-lg ${msg.role === 'user' ? 'bg-primary/10' : 'bg-muted'}`}>
+                  <span
+                    className={`inline-block rounded-lg p-2 ${msg.role === 'user' ? 'bg-primary/10' : 'bg-muted'}`}
+                  >
                     {msg.content}
                   </span>
                 </div>
               ))}
             </div>
-            <form onSubmit={handleSendMessage} className="p-4 border-t border-border flex">
+            <form onSubmit={handleSendMessage} className="flex border-t border-border p-4">
               <Input
                 type="text"
                 placeholder="Type a message..."
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                className="flex-grow mr-2"
+                className="mr-2 flex-grow"
               />
-              <Button type="submit" size="sm">
+              <Button type="submit" size="sm" disabled={status === 'processing'}>
                 <Bot className="h-4 w-4" />
               </Button>
             </form>
           </div>
         )}
-        <Button onClick={toggleChat} variant="outline" size="icon" aria-label="Toggle chat">
+        <Button
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          variant="outline"
+          size="icon"
+          aria-label="Toggle chat"
+        >
           <Bot className="h-6 w-6 text-primary" />
         </Button>
       </div>
     </main>
-  )
+  );
 }
-

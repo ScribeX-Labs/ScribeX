@@ -20,7 +20,6 @@ function Page() {
         </Button>
         <Button asChild>
           <Link href="/dashboard/transcribe">Transcribe</Link>
-          also quick suggestion one sec
         </Button>
       </div>
     </div>
