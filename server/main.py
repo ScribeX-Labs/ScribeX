@@ -1,8 +1,8 @@
+import time
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from contextlib import asynccontextmanager
 from starlette.middleware.cors import CORSMiddleware
-import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import firestore
 import uuid
 import os
 from dotenv import load_dotenv
@@ -14,6 +14,7 @@ from aws_service import (
     upload_file_to_s3,
     generate_presigned_url,
 )
+from firebase import db
 
 load_dotenv()
 
@@ -21,26 +22,6 @@ load_dotenv()
 MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB in bytes
 MAX_DURATION_SECONDS = 120  # 2 minutes in seconds
 TESTING_MODE = False  # Global flag for testing mode
-
-# Firebase configuration from .env variables
-firebase_credentials = {
-    "type": os.getenv("FIREBASE_TYPE"),
-    "project_id": os.getenv("FIREBASE_PROJECT_ID"),
-    "private_key_id": os.getenv("FIREBASE_PRIVATE_KEY_ID"),
-    "private_key": os.getenv("FIREBASE_PRIVATE_KEY").replace("\\n", "\n"),
-    "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
-    "client_id": os.getenv("FIREBASE_CLIENT_ID"),
-    "auth_uri": os.getenv("FIREBASE_AUTH_URI"),
-    "token_uri": os.getenv("FIREBASE_TOKEN_URI"),
-    "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_CERT_URL"),
-    "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_CERT_URL"),
-}
-
-# Initialize Firebase Admin SDK with environment-based credentials
-cred = credentials.Certificate(firebase_credentials)
-firebase_admin.initialize_app(cred)
-db = firestore.client()
-
 
 def get_audio_duration(file_path: str) -> float:
     """Get audio file duration using mutagen."""
@@ -175,9 +156,12 @@ async def upload_media(user_id: str, file: UploadFile = File(...)):
             .collection(f"{media_type}_files")
             .document()
         )
+        doc_id = doc_ref.id
         doc_ref.set(
             {
+                "id": doc_id,
                 "filename": unique_filename,
+                "original_filename": file.filename,
                 "file_url": file_url,
                 "user_id": user_id,
                 "content_type": file.content_type,
@@ -185,7 +169,61 @@ async def upload_media(user_id: str, file: UploadFile = File(...)):
             }
         )
 
-        return {"filename": unique_filename, "file_url": file_url}
+        return {"id": doc_id, "filename": unique_filename, "file_url": file_url}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
+@app.post("/update-media-url")
+async def update_media_url(body: dict):
+    user_id = body.get("user_id")
+    file_url = body.get("file_url")
+
+    expires = file_url.split("Expires=")[-1]
+
+    # if not expired, return the same URL
+    if int(expires) > int(time.time()):
+        return {"new_file_url": file_url}
+
+    if not user_id or not file_url:
+        raise HTTPException(
+            status_code=422, detail="user_id or file_url cannot be empty"
+        )
+
+    try:
+        # Determine media type based on file_url
+        if "audio" in file_url:
+            media_type = "audio"
+        elif "video" in file_url:
+            media_type = "video"
+        else:
+            raise HTTPException(status_code=400, detail="Invalid media type in URL")
+
+        # Search for the document in Firestore by file_url
+        collection_ref = (
+            db.collection("uploads").document(user_id).collection(f"{media_type}_files")
+        )
+        query = collection_ref.where("file_url", "==", file_url).limit(1)
+        docs = query.stream()
+
+        doc = next(docs, None)
+        if not doc:
+            raise HTTPException(status_code=404, detail="File not found")
+        # check if its still valid by checking the file_url Expires query param
+        # Get the S3 path from the document
+        file_data = doc.to_dict()
+        s3_path = file_data.get("file_url").split("amazonaws.com/")[-1]
+        # remove stuff after ? in the URL
+        s3_path = s3_path.split("?")[0]
+
+        # Generate a new presigned URL
+        new_file_url = generate_presigned_url(s3_path)
+
+        # Update the Firestore document with the new URL
+        doc.reference.update({"file_url": new_file_url})
+
+        return {"id": doc.id, "new_file_url": new_file_url}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")

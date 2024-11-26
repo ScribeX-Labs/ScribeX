@@ -3,6 +3,7 @@ import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Noto_Sans } from 'next/font/google';
+import { UserUploadDataProvider } from '@/context/UserUploadDataContext';
 
 const noto_sans = Noto_Sans({
   subsets: ['latin'],
@@ -21,10 +22,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${noto_sans.className} antialiased`}>
         <ThemeProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <UserUploadDataProvider>{children}</UserUploadDataProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
