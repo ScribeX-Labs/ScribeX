@@ -5,7 +5,6 @@ import { Bot, Download, Share, FileOutput } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StatusInfoDialog } from '@/components/status-info-dialog';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { StarRating } from '@/components/star-rating';
 import {
   Dialog,
@@ -16,6 +15,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useAuth } from '@/context/AuthContext';
+import { FileData, useUserUploadData } from '@/context/UserUploadDataContext';
 
 interface Message {
   role: 'user' | 'bot';
@@ -27,7 +27,7 @@ interface ChatResponse {
   text_id: string;
 }
 
-export default function Transcribe() {
+function Page({ params: { id } }: { params: { id: string } }) {
   const [status, setStatus] = useState<'success' | 'processing' | 'failed'>('success');
   const [text, setText] = useState<string>(
     'Heading into the school year as an educator is stressful enough. If you are worried about what to do about students using popular and increasingly powerful AI tools like ChatGPT for their academic assignments, we’re here to help navigate the big questions: What should I be doing about AI? How do I teach critical thinking and learning in the era of AI homework helpers?\n\nWe’ve collected practical guidance from top educational sources and our own research on teaching responsibly with AI content detection. This guide includes material for educators in both K-12 and higher education, to help you decide how to approach teaching and evaluating AI use in your classroom.',
@@ -39,7 +39,12 @@ export default function Transcribe() {
   const [transcriptRating, setTranscriptRating] = useState(0);
   const [currentTextId, setCurrentTextId] = useState<string | null>(null);
 
+  const [fileData, setFileData] = useState<FileData | null>(null);
+
   const { user } = useAuth();
+  const { getFileById } = useUserUploadData();
+
+  const [fileUrlLoaded, setFileUrlLoaded] = useState(false);
 
   // You should get this from your auth context/provider
   // Function to upload initial text
@@ -68,10 +73,33 @@ export default function Transcribe() {
     }
   };
 
+  const updateMediaURL = async (file_url: string) => {
+    try {
+      const response = await fetch(`http://localhost:8000/update-media-url`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: user?.uid,
+          file_url: file_url,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update media URL');
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error updating media URL:', error);
+    }
+  };
+
   // Upload text when it changes
   useEffect(() => {
+    getFileById(id).then((data) => setFileData(data));
     if (text && !currentTextId) {
-      uploadText(text);
+      // uploadText(text);
     }
   }, [text]);
 
@@ -81,6 +109,16 @@ export default function Transcribe() {
       loadChatHistory(currentTextId);
     }
   }, [currentTextId]);
+
+  useEffect(() => {
+    if (fileData) {
+      updateMediaURL(fileData.file_url).then((data) => {
+        fileData.file_url = data.new_file_url;
+        setFileData(fileData);
+        setFileUrlLoaded(true);
+      });
+    }
+  }, [fileData]);
 
   // Function to send message to AI
   const sendMessageToAI = async (message: string): Promise<string> => {
@@ -190,66 +228,95 @@ export default function Transcribe() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
+    <div className="flex w-full flex-col items-center justify-center p-4">
       <div className="w-full max-w-5xl space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex space-x-2">
-            <Button onClick={() => handleAction('Download')} aria-label="Download">
-              <Download className="mr-2 h-4 w-4" />
-              Download
-            </Button>
-            <Button onClick={() => handleAction('Export')} aria-label="Export">
-              <FileOutput className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-            <Button onClick={() => handleAction('Share')} aria-label="Share">
-              <Share className="mr-2 h-4 w-4" />
-              Share
-            </Button>
-            <Button
-              onClick={() => handleAction('Export with captions')}
-              aria-label="Export with captions"
-            >
-              <FileOutput className="mr-2 h-4 w-4" />
-              Export w/ captions
-            </Button>
-          </div>
-          <ThemeToggle />
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold">
+            {fileData?.original_filename || 'Transcription'} - {fileData?.content_type}
+          </h1>
         </div>
-        <textarea
-          className="h-96 w-full resize-none rounded-lg border border-gray-300 bg-background p-4 text-foreground focus:border-transparent focus:ring-2 focus:ring-blue-500"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Paste or type your text here..."
-          aria-label="Content input area"
-        />
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <div className="flex items-center">
-            <StatusInfoDialog status={status} />
-            <span className="ml-2">Status: {status.charAt(0).toUpperCase() + status.slice(1)}</span>
+      </div>
+      <div>
+        {fileUrlLoaded ? (
+          <div className="mb-4 w-full max-w-5xl space-y-4">
+            {fileData?.content_type.startsWith('video') ? (
+              <video controls className="w-full rounded-lg">
+                <source src={fileData.file_url} type={fileData.content_type} />
+                Your browser does not support the video tag.
+              </video>
+            ) : fileData?.content_type.startsWith('audio') ? (
+              <audio controls className="w-full rounded-lg">
+                <source src={fileData.file_url} type={fileData.content_type} />
+                Your browser does not support the audio element.
+              </audio>
+            ) : (
+              <p>Unsupported file type</p>
+            )}
           </div>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline">Rate Transcript</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Rate the Transcript</DialogTitle>
-                <DialogDescription>
-                  How would you rate the quality of this transcript?
-                </DialogDescription>
-              </DialogHeader>
-              <div className="py-4">
-                <StarRating onRate={handleRate} />
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-        {transcriptRating > 0 && (
-          <div className="text-sm text-muted-foreground">
-            You rated this transcript: {transcriptRating} stars
-          </div>
+        ) : (
+          <p>Loading...</p>
         )}
+        <div className="w-full max-w-5xl space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex space-x-2">
+              <Button onClick={() => handleAction('Download')} aria-label="Download">
+                <Download className="mr-2 h-4 w-4" />
+                Download
+              </Button>
+              <Button onClick={() => handleAction('Export')} aria-label="Export">
+                <FileOutput className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+              <Button onClick={() => handleAction('Share')} aria-label="Share">
+                <Share className="mr-2 h-4 w-4" />
+                Share
+              </Button>
+              <Button
+                onClick={() => handleAction('Export with captions')}
+                aria-label="Export with captions"
+              >
+                <FileOutput className="mr-2 h-4 w-4" />
+                Export w/ captions
+              </Button>
+            </div>
+          </div>
+          <textarea
+            className="h-96 w-full rounded-lg border border-gray-300 bg-background p-4 text-foreground focus:border-transparent focus:ring-2 focus:ring-blue-500"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Paste or type your text here..."
+            aria-label="Content input area"
+          />
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center">
+              <StatusInfoDialog status={status} />
+              <span className="ml-2">
+                Status: {status.charAt(0).toUpperCase() + status.slice(1)}
+              </span>
+            </div>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline">Rate Transcript</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Rate the Transcript</DialogTitle>
+                  <DialogDescription>
+                    How would you rate the quality of this transcript?
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <StarRating onRate={handleRate} />
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+          {transcriptRating > 0 && (
+            <div className="text-sm text-muted-foreground">
+              You rated this transcript: {transcriptRating} stars
+            </div>
+          )}
+        </div>
       </div>
       <div className="fixed bottom-5 right-5 flex flex-col items-end">
         {isChatOpen && (
@@ -289,6 +356,8 @@ export default function Transcribe() {
           <Bot className="h-6 w-6 text-primary" />
         </Button>
       </div>
-    </main>
+    </div>
   );
 }
+
+export default Page;

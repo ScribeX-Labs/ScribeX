@@ -5,6 +5,7 @@ import { Upload, FileAudio, FileVideo, AlertCircle, CheckCircle2 } from 'lucide-
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export function FileUploadDropzoneComponent() {
   const { user } = useAuth();
@@ -13,6 +14,7 @@ export function FileUploadDropzoneComponent() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const router = useRouter();
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -54,6 +56,7 @@ export function FileUploadDropzoneComponent() {
       if (response.ok) {
         const result = await response.json();
         setUploadSuccess(true);
+        router.push(`/dashboard/transcribe/${result.id}`);
         console.log('File uploaded successfully:', result.file_url);
       } else {
         const errorResult = await response.json();
@@ -72,11 +75,10 @@ export function FileUploadDropzoneComponent() {
   };
 
   return (
-    <div className="mx-auto mt-10 max-w-md rounded-lg bg-white p-6 shadow-md">
-      <h1 className="mb-4 text-2xl font-bold">Upload Audio/Video File</h1>
+    <div className="mt-10 h-full w-full rounded-lg bg-white p-6">
       <div
         {...getRootProps()}
-        className={`cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+        className={`h-full w-full cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
           isDragActive ? 'border-primary bg-primary/10' : 'border-gray-300 hover:border-primary'
         }`}
       >
