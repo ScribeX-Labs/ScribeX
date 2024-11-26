@@ -18,6 +18,10 @@ function Page() {
         <Button asChild>
           <Link href="/upload">Upload</Link>
         </Button>
+        <Button asChild>
+          <Link href="/dashboard/transcribe">Transcribe</Link>
+          also quick suggestion one sec
+        </Button>
       </div>
     </div>
   );
