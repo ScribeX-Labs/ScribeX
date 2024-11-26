@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { useAuth } from '@/context/AuthContext';
 
 interface Message {
   role: 'user' | 'bot';
@@ -36,8 +37,11 @@ export default function Transcribe() {
   const [inputMessage, setInputMessage] = useState('');
   const [isRatingOpen, setIsRatingOpen] = useState(false);
   const [transcriptRating, setTranscriptRating] = useState(0);
-  const [currentTextId, setCurrentTextId] = useState('text_20241126_010249');
+  const [currentTextId, setCurrentTextId] = useState<string | null>(null);
 
+  const { user } = useAuth();
+
+  // You should get this from your auth context/provider
   // Function to upload initial text
   const uploadText = async (text: string) => {
     try {
@@ -48,6 +52,7 @@ export default function Transcribe() {
         },
         body: JSON.stringify({
           text: text,
+          user_id: user?.uid,
         }),
       });
 
@@ -68,8 +73,14 @@ export default function Transcribe() {
     if (text && !currentTextId) {
       uploadText(text);
     }
-    loadChatHistory(currentTextId);
   }, [text]);
+
+  // Load chat history when textId is available
+  useEffect(() => {
+    if (currentTextId) {
+      loadChatHistory(currentTextId);
+    }
+  }, [currentTextId]);
 
   // Function to send message to AI
   const sendMessageToAI = async (message: string): Promise<string> => {
@@ -86,6 +97,7 @@ export default function Transcribe() {
         body: JSON.stringify({
           text_id: currentTextId,
           question: message,
+          user_id: user?.uid,
         }),
       });
 
@@ -99,41 +111,12 @@ export default function Transcribe() {
     }
   };
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (inputMessage.trim()) {
-      // Add user message immediately
-      setChatMessages((prev) => [...prev, { role: 'user', content: inputMessage }]);
-      setInputMessage('');
-      setStatus('processing');
-
-      // Get AI response
-      const aiResponse = await sendMessageToAI(inputMessage);
-
-      // Add AI response to chat
-      setChatMessages((prev) => [...prev, { role: 'bot', content: aiResponse }]);
-      setStatus('success');
-    }
-  };
-
-  const handleAction = async (action: string) => {
-    if (action === 'Share' && currentTextId) {
-      try {
-        const response = await fetch(`http://localhost:8000/ai/conversation/${currentTextId}`);
-        if (!response.ok) throw new Error('Failed to get conversation history');
-        const data = await response.json();
-        console.log('Conversation history:', data);
-        // Here you could implement sharing functionality
-      } catch (error) {
-        console.error('Error getting conversation history:', error);
-      }
-    }
-  };
-
   const loadChatHistory = async (textId: string) => {
     try {
       setStatus('processing');
-      const response = await fetch(`http://localhost:8000/ai/conversation/${textId}`);
+      const response = await fetch(
+        `http://localhost:8000/ai/conversation/${textId}?user_id=${user?.uid}`,
+      );
 
       if (!response.ok) throw new Error('Failed to load chat history');
 
@@ -146,11 +129,57 @@ export default function Transcribe() {
       ]);
 
       setChatMessages(formattedMessages);
-      setText(data.text); // Set the original text content
+      setText(data.text);
       setStatus('success');
     } catch (error) {
       console.error('Error loading chat history:', error);
       setStatus('failed');
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inputMessage.trim()) {
+      setChatMessages((prev) => [...prev, { role: 'user', content: inputMessage }]);
+      setInputMessage('');
+      setStatus('processing');
+
+      const aiResponse = await sendMessageToAI(inputMessage);
+
+      setChatMessages((prev) => [...prev, { role: 'bot', content: aiResponse }]);
+      setStatus('success');
+    }
+  };
+
+  const handleAction = async (action: string) => {
+    if (action === 'Share' && currentTextId) {
+      try {
+        const response = await fetch(
+          `http://localhost:8000/ai/conversation/${currentTextId}?user_id=${user?.uid}`,
+        );
+        if (!response.ok) throw new Error('Failed to get conversation history');
+
+        const data = await response.json();
+        console.log('Conversation history:', data);
+
+        // Create shareable URL
+        const shareUrl = new URL(window.location.href);
+        shareUrl.searchParams.set('textId', currentTextId);
+
+        // Use native share if available, fallback to clipboard
+        if (navigator.share) {
+          await navigator.share({
+            title: 'Shared Conversation',
+            url: shareUrl.toString(),
+          });
+        } else {
+          await navigator.clipboard.writeText(shareUrl.toString());
+          // You might want to add a toast notification here
+          alert('Link copied to clipboard!');
+        }
+      } catch (error) {
+        console.error('Error sharing:', error);
+      }
     }
   };
 

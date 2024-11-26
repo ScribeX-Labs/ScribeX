@@ -1,8 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from contextlib import asynccontextmanager
 from starlette.middleware.cors import CORSMiddleware
-import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import firestore
 import uuid
 import os
 from dotenv import load_dotenv
@@ -14,6 +13,7 @@ from aws_service import (
     upload_file_to_s3,
     generate_presigned_url,
 )
+from firebase import db
 
 load_dotenv()
 
@@ -21,26 +21,6 @@ load_dotenv()
 MAX_FILE_SIZE = 500 * 1024 * 1024  # 500 MB in bytes
 MAX_DURATION_SECONDS = 120  # 2 minutes in seconds
 TESTING_MODE = False  # Global flag for testing mode
-
-# Firebase configuration from .env variables
-firebase_credentials = {
-    "type": os.getenv("FIREBASE_TYPE"),
-    "project_id": os.getenv("FIREBASE_PROJECT_ID"),
-    "private_key_id": os.getenv("FIREBASE_PRIVATE_KEY_ID"),
-    "private_key": os.getenv("FIREBASE_PRIVATE_KEY").replace("\\n", "\n"),
-    "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
-    "client_id": os.getenv("FIREBASE_CLIENT_ID"),
-    "auth_uri": os.getenv("FIREBASE_AUTH_URI"),
-    "token_uri": os.getenv("FIREBASE_TOKEN_URI"),
-    "auth_provider_x509_cert_url": os.getenv("FIREBASE_AUTH_PROVIDER_CERT_URL"),
-    "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_CERT_URL"),
-}
-
-# Initialize Firebase Admin SDK with environment-based credentials
-cred = credentials.Certificate(firebase_credentials)
-firebase_admin.initialize_app(cred)
-db = firestore.client()
-
 
 def get_audio_duration(file_path: str) -> float:
     """Get audio file duration using mutagen."""
