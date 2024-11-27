@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from anthropic import Anthropic
-from typing import Dict, List, Optional
 from datetime import datetime
 import os
 from firebase import db
@@ -14,14 +13,17 @@ anthropic = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 class TextUpload(BaseModel):
     text: str
-    text_id: Optional[str] = None
+    file_id: str  # This is the file_id (video or audio)
     user_id: str
+    file_type: str  # "video" or "audio"
 
 
 class Question(BaseModel):
     text_id: str
     question: str
     user_id: str
+    file_id: str  # file_id (video or audio)
+    file_type: str  # "video" or "audio"
 
 
 class Response(BaseModel):
@@ -29,25 +31,65 @@ class Response(BaseModel):
     text_id: str
 
 
+def get_collection_name(file_type: str) -> str:
+    """Helper function to get the correct collection name"""
+    if file_type not in ["video", "audio"]:
+        raise HTTPException(status_code=400, detail="Invalid file type")
+    return f"{file_type}_files"
+
+
 @ai_router.post("/upload")
 async def upload_text(text_upload: TextUpload):
     """Upload text and get a text_id for future reference"""
-    if not text_upload.text_id:
-        text_upload.text_id = f"text_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    text_id = f"text_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
     try:
-        doc_ref = db.collection("ai_texts").document(text_upload.text_id)
-        doc_ref.set(
+        collection_name = get_collection_name(text_upload.file_type)
+
+        # Check if the file exists in the correct path
+        file_ref = (
+            db.collection("uploads")
+            .document(text_upload.user_id)
+            .collection(collection_name)
+            .document(text_upload.file_id)
+        )
+        file_doc = file_ref.get()
+
+        if not file_doc.exists:
+            raise HTTPException(
+                status_code=404,
+                detail=f"{text_upload.file_type.title()} file not found",
+            )
+
+        # Verify user has access to this file
+        file_data = file_doc.to_dict()
+        if file_data["user_id"] != text_upload.user_id:
+            raise HTTPException(
+                status_code=403, detail="Not authorized to access this file"
+            )
+
+        # add text_id to the file document
+        file_ref.update(
+            {
+                "text_id": text_id,
+            }
+        )
+
+        # Create ai_texts subcollection under the file document
+        ai_text_ref = file_ref.collection("ai_texts").document(text_id)
+
+        ai_text_ref.set(
             {
                 "text": text_upload.text,
                 "user_id": text_upload.user_id,
                 "created_at": firestore.SERVER_TIMESTAMP,
                 "conversation_history": [],
                 "last_accessed": firestore.SERVER_TIMESTAMP,
+                "file_type": text_upload.file_type,  # Store file type for future reference
             }
         )
 
-        return {"text_id": text_upload.text_id, "message": "Text uploaded successfully"}
+        return {"text_id": text_id, "message": "Text uploaded successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to store text: {str(e)}")
 
@@ -56,13 +98,24 @@ async def upload_text(text_upload: TextUpload):
 async def ask_question(question: Question):
     """Ask a question about previously uploaded text"""
     try:
-        doc_ref = db.collection("ai_texts").document(question.text_id)
-        doc = doc_ref.get()
+        collection_name = get_collection_name(question.file_type)
 
-        if not doc.exists:
+        # Get the AI text document from the correct path
+        ai_text_ref = (
+            db.collection("uploads")
+            .document(question.user_id)
+            .collection(collection_name)
+            .document(question.file_id)
+            .collection("ai_texts")
+            .document(question.text_id)
+        )
+
+        ai_text_doc = ai_text_ref.get()
+
+        if not ai_text_doc.exists:
             raise HTTPException(status_code=404, detail="Text ID not found")
 
-        doc_data = doc.to_dict()
+        doc_data = ai_text_doc.to_dict()
 
         if doc_data["user_id"] != question.user_id:
             raise HTTPException(
@@ -75,11 +128,7 @@ async def ask_question(question: Question):
         messages = [
             {
                 "role": "user",
-                "content": f"Here's the text content to analyze:\n\n{text}",
-            },
-            {
-                "role": "assistant",
-                "content": "I'll help you analyze this text. What would you like to know?",
+                "content": f"Here's the text content to analyze, answer any question I have:\n\n{text}",
             },
         ]
 
@@ -93,25 +142,28 @@ async def ask_question(question: Question):
             response = anthropic.messages.create(
                 model="claude-3-sonnet-20240229",
                 max_tokens=1000,
-                system="You are a helpful AI assistant. Answer questions based only on the provided text content. Be concise and accurate.",
+                system=(
+                    "You are a helpful AI assistant named Scribe. You take a transcription "
+                    "in for a video or audio file and you answer questions if the user has "
+                    "any. Answer questions based only on the provided text content. Be concise "
+                    "and accurate. Talk to the user like a friend with proper greetings. Don't "
+                    "start giving the summary; let only answer what the user asks about it. "
+                    "Make it like a conversation."
+                ),
                 messages=messages,
             )
 
             answer = response.content[0].text
 
-            # First update the conversation history
             new_history_entry = {
                 "question": question.question,
                 "answer": answer,
-                # Use a regular datetime string instead of SERVER_TIMESTAMP
                 "timestamp": datetime.now().isoformat(),
             }
 
-            # Append the new entry to history
             history.append(new_history_entry)
 
-            # Then update the document with both history and last_accessed
-            doc_ref.update(
+            ai_text_ref.update(
                 {
                     "conversation_history": history,
                     "last_accessed": firestore.SERVER_TIMESTAMP,
@@ -128,24 +180,33 @@ async def ask_question(question: Question):
 
 
 @ai_router.get("/conversation/{text_id}")
-async def get_conversation(text_id: str, user_id: str):
+async def get_conversation(text_id: str, user_id: str, file_id: str, file_type: str):
     """Retrieve the conversation history for a specific text"""
     try:
-        doc_ref = db.collection("ai_texts").document(text_id)
-        doc = doc_ref.get()
+        collection_name = get_collection_name(file_type)
 
-        if not doc.exists:
+        ai_text_ref = (
+            db.collection("uploads")
+            .document(user_id)
+            .collection(collection_name)
+            .document(file_id)
+            .collection("ai_texts")
+            .document(text_id)
+        )
+
+        ai_text_doc = ai_text_ref.get()
+
+        if not ai_text_doc.exists:
             raise HTTPException(status_code=404, detail="Text ID not found")
 
-        doc_data = doc.to_dict()
+        doc_data = ai_text_doc.to_dict()
 
         if doc_data["user_id"] != user_id:
             raise HTTPException(
                 status_code=403, detail="Not authorized to access this text"
             )
 
-        # Update last_accessed timestamp in a separate operation
-        doc_ref.update({"last_accessed": firestore.SERVER_TIMESTAMP})
+        ai_text_ref.update({"last_accessed": firestore.SERVER_TIMESTAMP})
 
         return {
             "text_id": text_id,
@@ -153,6 +214,7 @@ async def get_conversation(text_id: str, user_id: str):
             "conversation": doc_data.get("conversation_history", []),
             "created_at": doc_data.get("created_at"),
             "last_accessed": doc_data.get("last_accessed"),
+            "file_type": doc_data.get("file_type"),
         }
 
     except Exception as e:

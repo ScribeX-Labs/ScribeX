@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Bot, Download, Share, FileOutput } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,7 +50,8 @@ function Page({ params: { id } }: { params: { id: string } }) {
 
   const [fileUrlLoaded, setFileUrlLoaded] = useState(false);
   const [transcriptionStatus, setTranscriptionStatus] = useState<TranscriptionStatus | null>(null);
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [isPolling, setIsPolling] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement | null>(null); // Ref for chat container
 
   // You should get this from your auth context/provider
   // Function to upload initial text
@@ -63,7 +64,9 @@ function Page({ params: { id } }: { params: { id: string } }) {
         },
         body: JSON.stringify({
           text: text,
+          file_id: fileData?.id,
           user_id: user?.uid,
+          file_type: fileData?.content_type.split('/')[0],
         }),
       });
 
@@ -111,64 +114,70 @@ function Page({ params: { id } }: { params: { id: string } }) {
 
       if (!response.ok) throw new Error('Failed to get transcription status');
 
-      const statusData = await response.json();
+      const statusData: TranscriptionStatus = await response.json();
       setTranscriptionStatus(statusData);
 
       if (statusData.status === 'COMPLETED') {
-        // Fetch the transcription
+        setIsPolling(false);
         const transcriptResponse = await fetch(
           `http://localhost:8000/transcription/${user.uid}/${fileData.id}`,
         );
 
         if (transcriptResponse.ok) {
           const transcriptData = await transcriptResponse.json();
-          // Assuming the transcription is in the results.transcripts[0].transcript field
           setText(transcriptData.results.transcripts[0].transcript);
           setStatus('success');
-          // Clear the polling interval
-          if (pollingInterval) {
-            clearInterval(pollingInterval);
-            setPollingInterval(null);
-          }
         }
       } else if (statusData.status === 'FAILED') {
         setStatus('failed');
-        if (pollingInterval) {
-          clearInterval(pollingInterval);
-          setPollingInterval(null);
-        }
+        setIsPolling(false);
       }
     } catch (error) {
       console.error('Error checking transcription status:', error);
       setStatus('failed');
+      setIsPolling(false);
     }
   };
 
+  // Initialize polling when component mounts
   useEffect(() => {
-    if (fileData?.id && user?.uid && !pollingInterval) {
-      // Initial check
+    const initializePolling = async () => {
+      const data = await getFileById(id);
+      setFileData(data);
+
+      if (data?.id && user?.uid) {
+        setIsPolling(true);
+      }
+    };
+
+    initializePolling();
+  }, [id, user?.uid]);
+
+  // Handle polling
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
+
+    if (isPolling) {
+      // Immediate check
       checkTranscriptionStatus();
 
-      // Set up polling every 5 seconds
-      const interval = setInterval(checkTranscriptionStatus, 5000);
-      setPollingInterval(interval);
-
-      // Cleanup on unmount
-      return () => {
-        if (interval) {
-          clearInterval(interval);
-        }
-      };
+      // Set up interval
+      pollInterval = setInterval(checkTranscriptionStatus, 5000);
     }
-  }, [fileData?.id, user?.uid]);
 
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [isPolling, fileData?.id, user?.uid]);
   // Upload text when it changes
   useEffect(() => {
     getFileById(id).then((data) => setFileData(data));
     if (text && !currentTextId) {
       uploadText(text);
     }
-  }, [text]);
+  }, [text, currentTextId]);
 
   // Load chat history when textId is available
   useEffect(() => {
@@ -178,7 +187,7 @@ function Page({ params: { id } }: { params: { id: string } }) {
   }, [currentTextId]);
 
   useEffect(() => {
-    if (fileData) {
+    if (fileData && !fileUrlLoaded) {
       updateMediaURL(fileData.file_url).then((data) => {
         fileData.file_url = data.new_file_url;
         setFileData(fileData);
@@ -187,10 +196,22 @@ function Page({ params: { id } }: { params: { id: string } }) {
     }
   }, [fileData]);
 
+  useEffect(() => {
+    if (fileData?.text_id) {
+      setCurrentTextId(fileData.text_id);
+    }
+  }, [fileData]);
+
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
   // Function to send message to AI
   const sendMessageToAI = async (message: string): Promise<string> => {
     try {
-      if (!currentTextId) {
+      if (!fileData?.text_id) {
         throw new Error('No text ID available');
       }
 
@@ -200,9 +221,11 @@ function Page({ params: { id } }: { params: { id: string } }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          text_id: currentTextId,
+          text_id: fileData.text_id,
           question: message,
           user_id: user?.uid,
+          file_id: fileData.id,
+          file_type: fileData.content_type.split('/')[0],
         }),
       });
 
@@ -220,7 +243,7 @@ function Page({ params: { id } }: { params: { id: string } }) {
     try {
       setStatus('processing');
       const response = await fetch(
-        `http://localhost:8000/ai/conversation/${textId}?user_id=${user?.uid}`,
+        `http://localhost:8000/ai/conversation/${textId}?user_id=${user?.uid}&file_id=${fileData?.id}&file_type=${fileData?.content_type.split('/')[0]}`,
       );
 
       if (!response.ok) throw new Error('Failed to load chat history');
@@ -285,6 +308,22 @@ function Page({ params: { id } }: { params: { id: string } }) {
       } catch (error) {
         console.error('Error sharing:', error);
       }
+    }
+
+    if (action === 'Download') {
+      const link = document.createElement('a');
+      link.setAttribute('href', fileData?.file_url || '');
+      link.setAttribute('download', fileData?.original_filename || '');
+      link.click();
+    }
+
+    if (action === 'Export') {
+      const blob = new Blob([text], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${fileData?.original_filename} transcript.txt`);
+      link.click();
     }
   };
 
@@ -403,13 +442,18 @@ function Page({ params: { id } }: { params: { id: string } }) {
       </div>
       <div className="fixed bottom-5 right-5 flex flex-col items-end">
         {isChatOpen && (
-          <div className="mb-4 w-80 overflow-hidden rounded-lg border border-border bg-background shadow-lg">
-            <div className="bg-primary p-3 font-bold text-primary-foreground">Chat with AI</div>
-            <div className="h-64 space-y-2 overflow-y-auto p-4">
+          <div className="mb-4 w-96 overflow-hidden rounded-lg border border-border bg-background shadow-lg">
+            <div className="bg-primary p-3 font-bold text-primary-foreground">Chat with Scribe</div>
+            <div
+              ref={chatContainerRef} // Attach the ref here
+              className="h-72 space-y-2 overflow-y-auto p-4"
+            >
               {chatMessages.map((msg, index) => (
                 <div key={index} className={`${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
                   <span
-                    className={`inline-block rounded-lg p-2 ${msg.role === 'user' ? 'bg-primary/10' : 'bg-muted'}`}
+                    className={`inline-block rounded-lg p-2 ${
+                      msg.role === 'user' ? 'bg-primary/10' : 'bg-muted'
+                    }`}
                   >
                     {msg.content}
                   </span>
@@ -431,7 +475,20 @@ function Page({ params: { id } }: { params: { id: string } }) {
           </div>
         )}
         <Button
-          onClick={() => setIsChatOpen(!isChatOpen)}
+          onClick={() => {
+            setIsChatOpen((prev) => {
+              const newState = !prev;
+              if (newState) {
+                setTimeout(() => {
+                  chatContainerRef.current?.scrollTo({
+                    top: chatContainerRef.current?.scrollHeight,
+                    behavior: 'smooth',
+                  });
+                }, 0); // Timeout ensures the chat container is rendered before scrolling
+              }
+              return newState;
+            });
+          }}
           variant="outline"
           size="icon"
           aria-label="Toggle chat"

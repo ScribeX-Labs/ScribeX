@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, FileAudio, FileVideo } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 function Page() {
   const [files, setFiles] = React.useState<AllFiles>({ audioFiles: [], videoFiles: [] });
@@ -69,13 +70,19 @@ function Page() {
 }
 
 function FileCard({ file }: { file: FileData }) {
+  const router = useRouter();
   return (
-    <Link href={`/dashboard/transcribe/${file.id}`}>
-      <Card className="mb-4">
+    <div
+      className="w-full cursor-pointer overflow-hidden"
+      onClick={() => {
+        router.push(`/dashboard/transcribe/${file.id}`);
+      }}
+    >
+      <Card className="mb-4 w-full">
         <CardHeader>
           <div className="flex items-center justify-between space-x-2">
             <div>
-              <CardTitle>{file.original_filename}</CardTitle>
+              <CardTitle className="text-clip text-wrap">{file.original_filename}</CardTitle>
               <CardDescription>{file.content_type}</CardDescription>
               <p className="text-sm text-muted-foreground">
                 {file.upload_timestamp.toDate().toLocaleDateString()}
@@ -91,7 +98,11 @@ function FileCard({ file }: { file: FileData }) {
         <CardContent></CardContent>
         <CardFooter className="flex justify-end space-x-2">
           <Button variant="outline" asChild>
-            <Link href={file.file_url} download={file.original_filename}>
+            <Link
+              href={file.file_url}
+              download={file.original_filename}
+              onClick={(e) => e.stopPropagation()}
+            >
               Download
             </Link>
           </Button>
@@ -100,7 +111,7 @@ function FileCard({ file }: { file: FileData }) {
           </Button>
         </CardFooter>
       </Card>
-    </Link>
+    </div>
   );
 }
 

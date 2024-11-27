@@ -27,6 +27,7 @@ export interface FileData {
   filename: string;
   upload_timestamp: Timestamp;
   user_id: string;
+  text_id?: string;
 }
 
 export interface AllFiles {
