@@ -13,6 +13,9 @@ from ai import ai_router
 from aws_service import (
     upload_file_to_s3,
     generate_presigned_url,
+    start_transcription_job,
+    get_transcription_job_status,
+    get_transcription_result,
 )
 from firebase import db
 
@@ -128,7 +131,6 @@ async def upload_media(user_id: str, file: UploadFile = File(...)):
     print(f"User ID: {user_id}")
     print(f"Testing mode: {TESTING_MODE}")
 
-    # Pass testing mode to validate_media_file
     await validate_media_file(file, testing_mode=TESTING_MODE)
 
     unique_filename = f"{uuid.uuid4()}_{file.filename}"
@@ -136,7 +138,6 @@ async def upload_media(user_id: str, file: UploadFile = File(...)):
     s3_path = f"{user_id}/{media_type}/{unique_filename}"
 
     try:
-        # For testing mode, skip actual upload and return mock response
         if TESTING_MODE:
             return {
                 "filename": unique_filename,
@@ -145,9 +146,11 @@ async def upload_media(user_id: str, file: UploadFile = File(...)):
 
         # Upload file to S3
         upload_file_to_s3(file.file, s3_path, file.content_type)
-
-        # Generate presigned URL
         file_url = generate_presigned_url(s3_path)
+
+        # Start transcription job
+        job_name = f"transcribe_{uuid.uuid4()}"
+        transcription_job_name = start_transcription_job(s3_path, job_name)
 
         # Save metadata to Firestore
         doc_ref = (
@@ -166,10 +169,107 @@ async def upload_media(user_id: str, file: UploadFile = File(...)):
                 "user_id": user_id,
                 "content_type": file.content_type,
                 "upload_timestamp": firestore.SERVER_TIMESTAMP,
+                "transcription_job_name": transcription_job_name,
+                "transcription_status": "IN_PROGRESS",
             }
         )
 
-        return {"id": doc_id, "filename": unique_filename, "file_url": file_url}
+        return {
+            "id": doc_id,
+            "filename": unique_filename,
+            "file_url": file_url,
+            "transcription_job_name": transcription_job_name,
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
+@app.get("/transcription-status/{user_id}/{doc_id}")
+async def get_transcription_status(user_id: str, doc_id: str):
+    try:
+        # Get the document from Firestore
+        media_types = ["audio_files", "video_files"]
+        doc = None
+
+        for media_type in media_types:
+            doc_ref = (
+                db.collection("uploads")
+                .document(user_id)
+                .collection(media_type)
+                .document(doc_id)
+            )
+            doc = doc_ref.get()
+            if doc.exists:
+                break
+
+        if not doc or not doc.exists:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        doc_data = doc.to_dict()
+        job_name = doc_data.get("transcription_job_name")
+
+        if not job_name:
+            raise HTTPException(status_code=404, detail="No transcription job found")
+
+        # Get status from AWS Transcribe
+        status = get_transcription_job_status(job_name)
+
+        # Update status in Firestore if completed
+        if status["status"] == "COMPLETED":
+            doc.reference.update(
+                {
+                    "transcription_status": "COMPLETED",
+                    "transcript_uri": status["transcript_uri"],
+                }
+            )
+        elif status["status"] == "FAILED":
+            doc.reference.update(
+                {
+                    "transcription_status": "FAILED",
+                    "failure_reason": status.get("failure_reason", "Unknown error"),
+                }
+            )
+
+        return status
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
+@app.get("/transcription/{user_id}/{doc_id}")
+async def get_transcription(user_id: str, doc_id: str):
+    try:
+        # Get the document from Firestore
+        media_types = ["audio_files", "video_files"]
+        doc = None
+
+        for media_type in media_types:
+            doc_ref = (
+                db.collection("uploads")
+                .document(user_id)
+                .collection(media_type)
+                .document(doc_id)
+            )
+            doc = doc_ref.get()
+            if doc.exists:
+                break
+
+        if not doc or not doc.exists:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        doc_data = doc.to_dict()
+        transcript_uri = doc_data.get("transcript_uri")
+
+        if not transcript_uri:
+            raise HTTPException(
+                status_code=404,
+                detail="Transcription not available. Check status first.",
+            )
+
+        # Get transcription result
+        transcription = get_transcription_result(transcript_uri)
+        return transcription
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")

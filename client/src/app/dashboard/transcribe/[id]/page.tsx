@@ -27,11 +27,15 @@ interface ChatResponse {
   text_id: string;
 }
 
+interface TranscriptionStatus {
+  status: 'IN_PROGRESS' | 'COMPLETED' | 'FAILED';
+  transcript_uri?: string;
+  failure_reason?: string;
+}
+
 function Page({ params: { id } }: { params: { id: string } }) {
   const [status, setStatus] = useState<'success' | 'processing' | 'failed'>('success');
-  const [text, setText] = useState<string>(
-    'Heading into the school year as an educator is stressful enough. If you are worried about what to do about students using popular and increasingly powerful AI tools like ChatGPT for their academic assignments, we’re here to help navigate the big questions: What should I be doing about AI? How do I teach critical thinking and learning in the era of AI homework helpers?\n\nWe’ve collected practical guidance from top educational sources and our own research on teaching responsibly with AI content detection. This guide includes material for educators in both K-12 and higher education, to help you decide how to approach teaching and evaluating AI use in your classroom.',
-  );
+  const [text, setText] = useState<string>('');
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
@@ -45,6 +49,8 @@ function Page({ params: { id } }: { params: { id: string } }) {
   const { getFileById } = useUserUploadData();
 
   const [fileUrlLoaded, setFileUrlLoaded] = useState(false);
+  const [transcriptionStatus, setTranscriptionStatus] = useState<TranscriptionStatus | null>(null);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
 
   // You should get this from your auth context/provider
   // Function to upload initial text
@@ -94,6 +100,67 @@ function Page({ params: { id } }: { params: { id: string } }) {
       console.error('Error updating media URL:', error);
     }
   };
+
+  const checkTranscriptionStatus = async () => {
+    if (!fileData?.id || !user?.uid) return;
+
+    try {
+      const response = await fetch(
+        `http://localhost:8000/transcription-status/${user.uid}/${fileData.id}`,
+      );
+
+      if (!response.ok) throw new Error('Failed to get transcription status');
+
+      const statusData = await response.json();
+      setTranscriptionStatus(statusData);
+
+      if (statusData.status === 'COMPLETED') {
+        // Fetch the transcription
+        const transcriptResponse = await fetch(
+          `http://localhost:8000/transcription/${user.uid}/${fileData.id}`,
+        );
+
+        if (transcriptResponse.ok) {
+          const transcriptData = await transcriptResponse.json();
+          // Assuming the transcription is in the results.transcripts[0].transcript field
+          setText(transcriptData.results.transcripts[0].transcript);
+          setStatus('success');
+          // Clear the polling interval
+          if (pollingInterval) {
+            clearInterval(pollingInterval);
+            setPollingInterval(null);
+          }
+        }
+      } else if (statusData.status === 'FAILED') {
+        setStatus('failed');
+        if (pollingInterval) {
+          clearInterval(pollingInterval);
+          setPollingInterval(null);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking transcription status:', error);
+      setStatus('failed');
+    }
+  };
+
+  useEffect(() => {
+    if (fileData?.id && user?.uid && !pollingInterval) {
+      // Initial check
+      checkTranscriptionStatus();
+
+      // Set up polling every 5 seconds
+      const interval = setInterval(checkTranscriptionStatus, 5000);
+      setPollingInterval(interval);
+
+      // Cleanup on unmount
+      return () => {
+        if (interval) {
+          clearInterval(interval);
+        }
+      };
+    }
+  }, [fileData?.id, user?.uid]);
 
   // Upload text when it changes
   useEffect(() => {
@@ -237,6 +304,50 @@ function Page({ params: { id } }: { params: { id: string } }) {
         </div>
       </div>
       <div>
+        <div className="mb-4">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center">
+              <StatusInfoDialog
+                status={
+                  transcriptionStatus?.status === 'IN_PROGRESS'
+                    ? 'processing'
+                    : transcriptionStatus?.status === 'COMPLETED'
+                      ? 'success'
+                      : 'failed'
+                }
+              />
+              <span className="ml-2">
+                Status:
+                {transcriptionStatus?.status === 'IN_PROGRESS'
+                  ? ' In Progress'
+                  : transcriptionStatus?.status === 'COMPLETED'
+                    ? ' Completed'
+                    : ' Failed'}
+              </span>
+            </div>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline">Rate Transcript</Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Rate the Transcript</DialogTitle>
+                  <DialogDescription>
+                    How would you rate the quality of this transcript?
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <StarRating onRate={handleRate} />
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+          {transcriptRating > 0 && (
+            <div className="text-sm text-muted-foreground">
+              You rated this transcript: {transcriptRating} stars
+            </div>
+          )}
+        </div>
         {fileUrlLoaded ? (
           <div className="mb-4 w-full max-w-5xl space-y-4">
             {fileData?.content_type.startsWith('video') ? (
@@ -280,6 +391,7 @@ function Page({ params: { id } }: { params: { id: string } }) {
               </Button>
             </div>
           </div>
+
           <textarea
             className="h-96 w-full rounded-lg border border-gray-300 bg-background p-4 text-foreground focus:border-transparent focus:ring-2 focus:ring-blue-500"
             value={text}
@@ -287,35 +399,6 @@ function Page({ params: { id } }: { params: { id: string } }) {
             placeholder="Paste or type your text here..."
             aria-label="Content input area"
           />
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <div className="flex items-center">
-              <StatusInfoDialog status={status} />
-              <span className="ml-2">
-                Status: {status.charAt(0).toUpperCase() + status.slice(1)}
-              </span>
-            </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline">Rate Transcript</Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Rate the Transcript</DialogTitle>
-                  <DialogDescription>
-                    How would you rate the quality of this transcript?
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="py-4">
-                  <StarRating onRate={handleRate} />
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-          {transcriptRating > 0 && (
-            <div className="text-sm text-muted-foreground">
-              You rated this transcript: {transcriptRating} stars
-            </div>
-          )}
         </div>
       </div>
       <div className="fixed bottom-5 right-5 flex flex-col items-end">
