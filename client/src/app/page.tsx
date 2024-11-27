@@ -15,7 +15,7 @@ export default function Home() {
             Scribe helps you accurately transcribe audio and video files with advanced AI features.
           </p>
           <Button asChild size="lg">
-            <Link href="/signup">Get Started</Link>
+            <Link href="/login">Get Started</Link>
           </Button>
         </section>
 
