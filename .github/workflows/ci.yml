@@ -1,0 +1,68 @@
+name: CI Test Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4  # Updated to v4
+
+      - name: Set Up Python Environment
+        uses: actions/setup-python@v5  # Updated to v5
+        with:
+          python-version: '3.10'
+
+      - name: Create Environment Variables File
+        run: |
+          echo "S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}" >> .env
+          echo "AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}" >> .env
+          echo "AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}" >> .env
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
+          echo "FIREBASE_TYPE=${{ secrets.FIREBASE_TYPE }}" >> .env
+          echo "FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env
+          echo "FIREBASE_PRIVATE_KEY_ID=${{ secrets.FIREBASE_PRIVATE_KEY_ID }}" >> .env
+          echo "FIREBASE_PRIVATE_KEY=${{ secrets.FIREBASE_PRIVATE_KEY }}" >> .env
+          echo "FIREBASE_CLIENT_EMAIL=${{ secrets.FIREBASE_CLIENT_EMAIL }}" >> .env
+          echo "FIREBASE_CLIENT_ID=${{ secrets.FIREBASE_CLIENT_ID }}" >> .env
+          echo "FIREBASE_AUTH_URI=${{ secrets.FIREBASE_AUTH_URI }}" >> .env
+          echo "FIREBASE_TOKEN_URI=${{ secrets.FIREBASE_TOKEN_URI }}" >> .env
+          echo "FIREBASE_AUTH_PROVIDER_CERT_URL=${{ secrets.FIREBASE_AUTH_PROVIDER_CERT_URL }}" >> .env
+          echo "FIREBASE_CLIENT_CERT_URL=${{ secrets.FIREBASE_CLIENT_CERT_URL }}" >> .env
+
+      - name: Install Backend Dependencies
+        working-directory: ./server
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio httpx
+
+      - name: Execute Backend Tests
+        working-directory: ./server
+        run: pytest test_main.py
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4  # Updated to v4
+
+      - name: Set Up Node.js Environment
+        uses: actions/setup-node@v4  # Updated to v4
+        with:
+          node-version: '18'
+
+      - name: Install Frontend Dependencies
+        working-directory: ./client
+        run: npm install
+
+      - name: Execute Frontend Tests
+        working-directory: ./client
+        run: npm test
