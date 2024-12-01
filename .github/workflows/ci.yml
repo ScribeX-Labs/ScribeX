@@ -46,7 +46,7 @@ jobs:
 
       - name: Execute Backend Tests
         working-directory: ./server
-        run: PYTHONPATH= . pytest
+        run: pytest
 
   frontend-tests:
     runs-on: ubuntu-latest
