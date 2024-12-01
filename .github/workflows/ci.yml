@@ -9,14 +9,40 @@ on:
       - main
 
 jobs:
-  backend-tests:
+  check-changes:
     runs-on: ubuntu-latest
+    outputs:
+      backend_changed: ${{ steps.check.outputs.backend_changed }}
+      frontend_changed: ${{ steps.check.outputs.frontend_changed }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4  # Updated to v4
+        uses: actions/checkout@v4
+
+      - name: Check for Backend and Frontend Changes
+        id: check
+        run: |
+          git fetch origin main
+          BACKEND_CHANGED=false
+          FRONTEND_CHANGED=false
+          if git diff --name-only origin/main | grep '^server/'; then
+            BACKEND_CHANGED=true
+          fi
+          if git diff --name-only origin/main | grep '^client/'; then
+            FRONTEND_CHANGED=true
+          fi
+          echo "backend_changed=$BACKEND_CHANGED" >> $GITHUB_OUTPUT
+          echo "frontend_changed=$FRONTEND_CHANGED" >> $GITHUB_OUTPUT
+
+  backend-tests:
+    runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.check-changes.outputs.backend_changed == 'true'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Set Up Python Environment
-        uses: actions/setup-python@v5  # Updated to v5
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -27,31 +53,20 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-asyncio httpx
 
-      - name: Determine Changed Files
-        id: changed-files
-        run: |
-          git fetch origin main
-          CHANGED_FILES=$(git diff --name-only origin/main)
-          echo "::set-output name=changed_files::$CHANGED_FILES"
-
-      - name: Execute Backend Tests for Changed Files
-        run: |
-          TEST_FILES=$(echo "${{ steps.changed-files.outputs.changed_files }}" | grep '^server/tests/' | grep '_test\.py$' || true)
-          if [ -z "$TEST_FILES" ]; then
-            echo "No backend test files changed. Skipping tests."
-          else
-            echo "Running backend tests for changed files: $TEST_FILES"
-            PYTHONPATH=./server pytest $TEST_FILES
-          fi
+      - name: Execute Backend Tests
+        working-directory: ./server
+        run: pytest
 
   frontend-tests:
     runs-on: ubuntu-latest
+    needs: check-changes
+    if: needs.check-changes.outputs.frontend_changed == 'true'
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4  # Updated to v4
+        uses: actions/checkout@v4
 
       - name: Set Up Node.js Environment
-        uses: actions/setup-node@v4  # Updated to v4
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
 
@@ -59,20 +74,6 @@ jobs:
         working-directory: ./client
         run: npm install
 
-      - name: Determine Changed Files
-        id: frontend-changed-files
-        run: |
-          git fetch origin main
-          CHANGED_FILES=$(git diff --name-only origin/main)
-          echo "::set-output name=changed_files::$CHANGED_FILES"
-
-      - name: Execute Frontend Tests for Changed Files
+      - name: Execute Frontend Tests
         working-directory: ./client
-        run: |
-          TEST_COMPONENTS=$(echo "${{ steps.frontend-changed-files.outputs.changed_files }}" | grep '^client/__tests__/' | grep '\.test\.[jt]sx$' || true)
-          if [ -z "$TEST_COMPONENTS" ]; then
-            echo "No frontend test files changed. Skipping tests."
-          else
-            echo "Running frontend tests for changed components: $TEST_COMPONENTS"
-            npm test -- $TEST_COMPONENTS
-          fi
+        run: npm test
