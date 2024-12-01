@@ -53,26 +53,22 @@ export function AppSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}         
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      
-      
+
       {/* Logout Button at Bottom 
       you left off here, what you need to work on next is 
       
       
       */}
 
-
-      
-
       {/* User Profile Section */}
-      <div className="border-t flex items-center cursor-pointer" onClick={togglePopup}>
-        <Avatar src={user?.photoURL} size="50px"/>
-        <div className="flex flex-col ml-4 flex-grow overflow-hidden">
+      <div className="flex cursor-pointer items-center border-t p-2" onClick={togglePopup}>
+        <Avatar src={user?.photoURL ?? ''} size="40px" />
+        <div className="ml-4 flex flex-grow flex-col overflow-hidden">
           <span className="text-sm font-medium">{user?.displayName}</span>
           <span className="text-xs text-gray-500">{user?.email}</span>
         </div>
@@ -80,7 +76,7 @@ export function AppSidebar() {
 
       {/* Popup Dropdown */}
       {isPopupOpen && (
-        <div className="absolute bottom-16 left-0 w-full bg-white shadow-md rounded-md z-50">
+        <div className="absolute bottom-16 left-0 z-50 w-full rounded-md bg-white shadow-md">
           <ul className="p-2">
             <li className="p-2 hover:bg-gray-100">
               <button onClick={logout} className="w-full text-left text-black">
