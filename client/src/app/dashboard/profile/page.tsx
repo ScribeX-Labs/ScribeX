@@ -4,10 +4,9 @@ import { useAuth } from '@/context/AuthContext';
 import { FC } from 'react';
 
 
-const profilePage: FC = () => {
-  
+const ProfilePage: FC = () => {
   const { user, logout } = useAuth();
-  console.log(user?.photoURL)
+  console.log(user?.photoURL);
   return (
     <div className="container mx-auto p-4">
       <div className="flex flex-col gap-6 md:flex-row">
@@ -43,4 +42,4 @@ const profilePage: FC = () => {
   */
 };
 
-export default profilePage;
+export default ProfilePage;
