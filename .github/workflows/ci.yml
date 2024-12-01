@@ -44,8 +44,22 @@ jobs:
           pip install -r requirements.txt
           pip install pytest pytest-asyncio httpx
 
-      - name: Execute Backend Tests
-        run: PYTHONPATH=./server pytest
+      - name: Determine Changed Files
+        id: changed-files
+        run: |
+          git fetch origin main
+          CHANGED_FILES=$(git diff --name-only origin/main)
+          echo "::set-output name=changed_files::$CHANGED_FILES"
+
+      - name: Execute Backend Tests for Changed Files
+        run: |
+          TEST_FILES=$(echo "${{ steps.changed-files.outputs.changed_files }}" | grep '^server/' | grep '_test\.py$' || true)
+          if [ -z "$TEST_FILES" ]; then
+            echo "No test files changed. Skipping tests."
+          else
+            echo "Running tests for changed files: $TEST_FILES"
+            PYTHONPATH=./server pytest $TEST_FILES
+          fi
 
   frontend-tests:
     runs-on: ubuntu-latest
@@ -62,6 +76,19 @@ jobs:
         working-directory: ./client
         run: npm install
 
-      - name: Execute Frontend Tests
-        working-directory: ./client
-        run: npm test
+      - name: Determine Changed Files
+        id: frontend-changed-files
+        run: |
+          git fetch origin main
+          CHANGED_FILES=$(git diff --name-only origin/main)
+          echo "::set-output name=changed_files::$CHANGED_FILES"
+
+      - name: Execute Frontend Tests for Changed Files
+        run: |
+          TEST_COMPONENTS=$(echo "${{ steps.frontend-changed-files.outputs.changed_files }}" | grep '^client/' || true)
+          if [ -z "$TEST_COMPONENTS" ]; then
+            echo "No frontend components changed. Skipping tests."
+          else
+            echo "Running frontend tests for changed components: $TEST_COMPONENTS"
+            npm test -- $TEST_COMPONENTS
+          fi
