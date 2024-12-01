@@ -57,7 +57,7 @@ function Page({ params: { id } }: { params: { id: string } }) {
   // Function to upload initial text
   const uploadText = async (text: string) => {
     try {
-      const response = await fetch('http://localhost:8000/ai/upload', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/upload`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,7 +84,7 @@ function Page({ params: { id } }: { params: { id: string } }) {
 
   const updateMediaURL = async (file_url: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/update-media-url`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/update-media-url`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +109,7 @@ function Page({ params: { id } }: { params: { id: string } }) {
 
     try {
       const response = await fetch(
-        `http://localhost:8000/transcription-status/${user.uid}/${fileData.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/transcription-status/${user.uid}/${fileData.id}`,
       );
 
       if (!response.ok) throw new Error('Failed to get transcription status');
@@ -120,7 +120,7 @@ function Page({ params: { id } }: { params: { id: string } }) {
       if (statusData.status === 'COMPLETED') {
         setIsPolling(false);
         const transcriptResponse = await fetch(
-          `http://localhost:8000/transcription/${user.uid}/${fileData.id}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/transcription/${user.uid}/${fileData.id}`,
         );
 
         if (transcriptResponse.ok) {
@@ -215,7 +215,7 @@ function Page({ params: { id } }: { params: { id: string } }) {
         throw new Error('No text ID available');
       }
 
-      const response = await fetch('http://localhost:8000/ai/ask', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/ask`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -243,7 +243,7 @@ function Page({ params: { id } }: { params: { id: string } }) {
     try {
       setStatus('processing');
       const response = await fetch(
-        `http://localhost:8000/ai/conversation/${textId}?user_id=${user?.uid}&file_id=${fileData?.id}&file_type=${fileData?.content_type.split('/')[0]}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/ai/conversation/${textId}?user_id=${user?.uid}&file_id=${fileData?.id}&file_type=${fileData?.content_type.split('/')[0]}`,
       );
 
       if (!response.ok) throw new Error('Failed to load chat history');
@@ -283,7 +283,7 @@ function Page({ params: { id } }: { params: { id: string } }) {
     if (action === 'Share' && currentTextId) {
       try {
         const response = await fetch(
-          `http://localhost:8000/ai/conversation/${currentTextId}?user_id=${user?.uid}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/ai/conversation/${currentTextId}?user_id=${user?.uid}`,
         );
         if (!response.ok) throw new Error('Failed to get conversation history');
 

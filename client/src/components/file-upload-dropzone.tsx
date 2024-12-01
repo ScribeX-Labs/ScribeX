@@ -48,10 +48,13 @@ export function FileUploadDropzoneComponent() {
 
     try {
       // Append user_id as a query parameter
-      const response = await fetch(`http://localhost:8000/upload-media/?user_id=${user.uid}`, {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/upload-media/?user_id=${user.uid}`,
+        {
+          method: 'POST',
+          body: formData,
+        },
+      );
 
       if (response.ok) {
         const result = await response.json();
