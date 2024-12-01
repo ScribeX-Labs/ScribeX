@@ -1,6 +1,6 @@
 // jest.setup.ts
 import '@testing-library/jest-dom';
-import { TextEncoder, TextDecoder } from 'util';
+import { TextEncoder, TextDecoder } from 'text-encoding';
 import { config } from 'dotenv';
 
 config({ path: '.env.test' });
