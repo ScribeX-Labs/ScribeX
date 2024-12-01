@@ -1,4 +1,4 @@
-name: CI Test Pipeline
+name: Scribe CI
 
 on:
   push:
@@ -20,23 +20,6 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Create Environment Variables File
-        run: |
-          echo "S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}" >> .env
-          echo "AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}" >> .env
-          echo "AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}" >> .env
-          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
-          echo "FIREBASE_TYPE=${{ secrets.FIREBASE_TYPE }}" >> .env
-          echo "FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}" >> .env
-          echo "FIREBASE_PRIVATE_KEY_ID=${{ secrets.FIREBASE_PRIVATE_KEY_ID }}" >> .env
-          echo "FIREBASE_PRIVATE_KEY=${{ secrets.FIREBASE_PRIVATE_KEY }}" >> .env
-          echo "FIREBASE_CLIENT_EMAIL=${{ secrets.FIREBASE_CLIENT_EMAIL }}" >> .env
-          echo "FIREBASE_CLIENT_ID=${{ secrets.FIREBASE_CLIENT_ID }}" >> .env
-          echo "FIREBASE_AUTH_URI=${{ secrets.FIREBASE_AUTH_URI }}" >> .env
-          echo "FIREBASE_TOKEN_URI=${{ secrets.FIREBASE_TOKEN_URI }}" >> .env
-          echo "FIREBASE_AUTH_PROVIDER_CERT_URL=${{ secrets.FIREBASE_AUTH_PROVIDER_CERT_URL }}" >> .env
-          echo "FIREBASE_CLIENT_CERT_URL=${{ secrets.FIREBASE_CLIENT_CERT_URL }}" >> .env
-
       - name: Install Backend Dependencies
         working-directory: ./server
         run: |
@@ -53,11 +36,11 @@ jobs:
 
       - name: Execute Backend Tests for Changed Files
         run: |
-          TEST_FILES=$(echo "${{ steps.changed-files.outputs.changed_files }}" | grep '^server/' | grep '_test\.py$' || true)
+          TEST_FILES=$(echo "${{ steps.changed-files.outputs.changed_files }}" | grep '^server/tests/' | grep '_test\.py$' || true)
           if [ -z "$TEST_FILES" ]; then
-            echo "No test files changed. Skipping tests."
+            echo "No backend test files changed. Skipping tests."
           else
-            echo "Running tests for changed files: $TEST_FILES"
+            echo "Running backend tests for changed files: $TEST_FILES"
             PYTHONPATH=./server pytest $TEST_FILES
           fi
 
@@ -84,10 +67,11 @@ jobs:
           echo "::set-output name=changed_files::$CHANGED_FILES"
 
       - name: Execute Frontend Tests for Changed Files
+        working-directory: ./client
         run: |
-          TEST_COMPONENTS=$(echo "${{ steps.frontend-changed-files.outputs.changed_files }}" | grep '^client/' || true)
+          TEST_COMPONENTS=$(echo "${{ steps.frontend-changed-files.outputs.changed_files }}" | grep '^client/__tests__/' | grep '\.test\.[jt]sx$' || true)
           if [ -z "$TEST_COMPONENTS" ]; then
-            echo "No frontend components changed. Skipping tests."
+            echo "No frontend test files changed. Skipping tests."
           else
             echo "Running frontend tests for changed components: $TEST_COMPONENTS"
             npm test -- $TEST_COMPONENTS
