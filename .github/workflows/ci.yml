@@ -54,7 +54,6 @@ jobs:
           pip install pytest pytest-asyncio httpx
 
       - name: Execute Backend Tests
-        working-directory: ./server
         run: PYTHONPATH=./server pytest
 
   frontend-tests:
