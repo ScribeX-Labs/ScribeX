@@ -1,7 +1,7 @@
 services:
   client:
     build: ./client
-    container_name: nextjs_client
+    container_name: scribe_client
     restart: always
     ports:
       - "3000:3000"
