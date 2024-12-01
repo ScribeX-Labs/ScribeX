@@ -10,7 +10,6 @@ from firebase_admin import firestore
 ai_router = APIRouter()
 anthropic = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
-
 class TextUpload(BaseModel):
     text: str
     file_id: str  # This is the file_id (video or audio)
