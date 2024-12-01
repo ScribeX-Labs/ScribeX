@@ -163,6 +163,21 @@ async def test_case_6_null_duration(mock_dependencies):
         assert response.status_code == 400
         assert "duration is required" in response.json()["detail"].lower()
 
+@pytest.mark.asyncio
+async def test_case_7_null_size_and_duration(mock_dependencies):
+    """Test Case 7: Null file and duration check"""
+    mock_dependencies[0].return_value.duration = None
+
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.post(
+            "/upload-media/",
+            params={"user_id": "test_user"},
+        )
+
+        assert response.status_code == 422
+        assert "field required" in response.text.lower()
+
+
 
 def test_root_endpoint(client):
     response = client.get("/")
