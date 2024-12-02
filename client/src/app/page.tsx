@@ -14,7 +14,7 @@ export default function Home() {
           <p className="mb-8 text-xl text-muted-foreground">
             Scribe helps you accurately transcribe audio and video files with advanced AI features.
           </p>
-          <Button asChild size="lg" className="rounded-full px-8 py-6 text-lg">
+          <Button asChild size="lg">
             <Link href="/login">Get Started</Link>
           </Button>
         </section>
@@ -63,7 +63,7 @@ export default function Home() {
           <h3 className="mb-6 text-3xl font-bold">
             Ready to streamline your transcription workflow?
           </h3>
-          <Button asChild size="lg" variant="default" className="rounded-full px-8 py-6 text-lg">
+          <Button asChild size="lg" variant="default">
             <Link href="/login">Create Your Free Account</Link>
           </Button>
         </section>
