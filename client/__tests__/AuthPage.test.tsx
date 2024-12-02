@@ -104,53 +104,37 @@ describe('AuthPage-SignUpCases', () => {
     });
   });
 
-  it('renders the sign-up form with Google signup button', async () => {
+  it('renders the signup form with Google signup button', async () => {
     render(<AuthPage />);
     const user = userEvent.setup();
-
-    // Switch to the Sign-Up tab
-    const signUpTab = screen.getByText('Sign Up');
+    const signUpTab = screen.getByText('Sign Up');//Switch to signup
     await user.click(signUpTab);
-
-    // Verify that the form fields and Google button exist
-    expect(screen.getByTestId('email-input')).toBeInTheDocument();
+    expect(screen.getByTestId('email-input')).toBeInTheDocument();// Verify that the form fields and Google button exist
     expect(screen.getByTestId('password-input')).toBeInTheDocument();
     expect(screen.getByTestId('signup-submit')).toBeInTheDocument();
     expect(screen.getByTestId('google-signup')).toBeInTheDocument();
   });
 
-  it('handles valid sign-up form submission', async () => {
+  it('handles valid signup form submission', async () => {
     render(<AuthPage />);
     const user = userEvent.setup();
-
-    // Switch to the Sign-Up tab
     const signUpTab = screen.getByText('Sign Up');
     await user.click(signUpTab);
-
-    // Fill out the form with valid data
     await user.type(screen.getByTestId('email-input'), 'user@example.com');
     await user.type(screen.getByTestId('password-input'), 'StrongPassword123');
     await user.click(screen.getByTestId('signup-submit'));
-
-    // Expect the createUser function to be called with correct arguments
     await waitFor(() => {
       expect(mockCreateUser).toHaveBeenCalledWith('user@example.com', 'StrongPassword123');
     });
   });
 
-  it('handles sign-up with Google', async () => {
+  it('handles signup with Google', async () => {
     render(<AuthPage />);
     const user = userEvent.setup();
-
-    // Switch to the Sign-Up tab
     const signUpTab = screen.getByText('Sign Up');
     await user.click(signUpTab);
-
-    // Click the Google Sign-Up button
     const googleSignUpButton = screen.getByTestId('google-signup');
     await user.click(googleSignUpButton);
-
-    // Expect loginWithGoogle to be called
     await waitFor(() => {
       expect(mockLoginWithGoogle).toHaveBeenCalled();
     });
@@ -159,33 +143,21 @@ describe('AuthPage-SignUpCases', () => {
   it('shows an error for an invalid email', async () => {
     render(<AuthPage />);
     const user = userEvent.setup();
-
-    // Switch to the Sign-Up tab
     const signUpTab = screen.getByText('Sign Up');
     await user.click(signUpTab);
-
-    // Fill out the form with an invalid email
     await user.type(screen.getByTestId('email-input'), 'invalidemail');
     await user.type(screen.getByTestId('password-input'), 'StrongPassword123');
     await user.click(screen.getByTestId('signup-submit'));
-
-    // Verify error message for invalid email
     expect(await screen.findByTestId('email-error')).toHaveTextContent('Invalid email format');
   });
 
   it('shows an error when the password is missing', async () => {
     render(<AuthPage />);
     const user = userEvent.setup();
-
-    // Switch to the Sign-Up tab
     const signUpTab = screen.getByText('Sign Up');
     await user.click(signUpTab);
-
-    // Fill out the form without a password
     await user.type(screen.getByTestId('email-input'), 'user@example.com');
     await user.click(screen.getByTestId('signup-submit'));
-
-    // Verify error message for missing password
     expect(await screen.findByTestId('password-error')).toHaveTextContent('Password is required');
   });
 
@@ -193,17 +165,11 @@ describe('AuthPage-SignUpCases', () => {
     mockCreateUser.mockRejectedValueOnce(new Error('Email already exists'));
     render(<AuthPage />);
     const user = userEvent.setup();
-
-    // Switch to the Sign-Up tab
     const signUpTab = screen.getByText('Sign Up');
     await user.click(signUpTab);
-
-    // Fill out the form with duplicate email
     await user.type(screen.getByTestId('email-input'), 'existinguser@example.com');
     await user.type(screen.getByTestId('password-input'), 'StrongPassword123');
     await user.click(screen.getByTestId('signup-submit'));
-
-    // Verify error message for duplicate email
     expect(await screen.findByTestId('email-error')).toHaveTextContent('Email already exists');
   });
 
@@ -218,12 +184,8 @@ describe('AuthPage-SignUpCases', () => {
 
     render(<AuthPage />);
     const user = userEvent.setup();
-
-    // Switch to the Sign-Up tab
     const signUpTab = screen.getByText('Sign Up');
     user.click(signUpTab);
-
-    // Verify submit button is disabled and shows loading text
     const submitButton = screen.getByTestId('signup-submit');
     expect(submitButton).toBeDisabled();
     expect(submitButton).toHaveTextContent('Signing Up...');
