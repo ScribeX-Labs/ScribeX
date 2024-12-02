@@ -1,7 +1,7 @@
 import pytest
 import os
 from unittest.mock import MagicMock, patch
-from ..transcribe import TranscriptionService
+from transcribe import TranscriptionService
 
 @pytest.fixture
 def mock_firebase():

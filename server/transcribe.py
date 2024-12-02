@@ -1,5 +1,5 @@
 import os
-from .firebase import db
+from firebase import db
 from firebase_admin import firestore
 from datetime import datetime
 
