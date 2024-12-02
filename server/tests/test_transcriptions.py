@@ -21,8 +21,8 @@ def mock_firebase():
     mock_ai_text_doc.set = MagicMock()
 
     # Patch the db import
-    with patch('server.transcribe.db', mock_db), \
-         patch('server.transcribe.firestore.SERVER_TIMESTAMP', 'mock_timestamp'):
+    with patch('transcribe.db', mock_db), \
+         patch('transcribe.firestore.SERVER_TIMESTAMP', 'mock_timestamp'):
         yield {
             'db': mock_db,
             'file_ref': mock_file_ref,
