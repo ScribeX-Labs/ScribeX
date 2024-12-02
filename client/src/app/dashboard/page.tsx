@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect } from 'react';
+import React, { use, useEffect } from 'react';
 import Link from 'next/link';
 import { FileData, useUserUploadData, AllFiles } from '@/context/UserUploadDataContext';
 import {
@@ -13,14 +13,34 @@ import {
 import { Button } from '@/components/ui/button';
 import { PlusCircle, FileAudio, FileVideo } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { db } from '@/lib/firebase';
+import { deleteDoc, doc } from 'firebase/firestore';
+import { useAuth } from '@/context/AuthContext';
 
 function Page() {
   const [files, setFiles] = React.useState<AllFiles>({ audioFiles: [], videoFiles: [] });
   const { getAllFiles } = useUserUploadData();
+  const { user } = useAuth();
 
   useEffect(() => {
     getAllFiles().then((files) => setFiles(files));
   }, []);
+
+  const handleDelete = async (fileId: string, type: string) => {
+    try {
+      if (user?.uid) {
+        await deleteDoc(doc(db, 'uploads', user.uid, `${type}_files`, fileId));
+      } else {
+        throw new Error('User ID is undefined');
+      }
+      const updatedFiles = { ...files };
+      updatedFiles.audioFiles = updatedFiles.audioFiles.filter((file) => file.id !== fileId);
+      updatedFiles.videoFiles = updatedFiles.videoFiles.filter((file) => file.id !== fileId);
+      setFiles(updatedFiles);
+    } catch (error: any) {
+      console.error('Error deleting file:', error.message);
+    }
+  };
 
   return (
     <div className="flex w-full flex-col items-center justify-center p-4">
@@ -47,7 +67,7 @@ function Page() {
                 <h2 className="mb-4 text-xl font-semibold">Audio Files</h2>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                   {files.audioFiles.map((file) => (
-                    <FileCard key={file.id} file={file} />
+                    <FileCard key={file.id} file={file} handleDelete={handleDelete} />
                   ))}
                 </div>
               </div>
@@ -57,7 +77,7 @@ function Page() {
                 <h2 className="mb-4 text-xl font-semibold">Video Files</h2>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
                   {files.videoFiles.map((file) => (
-                    <FileCard key={file.id} file={file} />
+                    <FileCard key={file.id} file={file} handleDelete={handleDelete} />
                   ))}
                 </div>
               </div>
@@ -69,7 +89,13 @@ function Page() {
   );
 }
 
-function FileCard({ file }: { file: FileData }) {
+function FileCard({
+  file,
+  handleDelete,
+}: {
+  file: FileData;
+  handleDelete: (fileId: string, type: string) => void;
+}) {
   const router = useRouter();
   return (
     <div
@@ -106,7 +132,16 @@ function FileCard({ file }: { file: FileData }) {
               Download
             </Link>
           </Button>
-          <Button variant="outline" className="text-destructive hover:text-destructive">
+          <Button
+            variant="outline"
+            className="text-destructive hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (file.id) {
+                handleDelete(file.id, file.content_type.includes('audio') ? 'audio' : 'video');
+              }
+            }}
+          >
             Delete
           </Button>
         </CardFooter>
