@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/AuthContext';
-import { type } from 'os';
+import { toast } from '@/hooks/use-toast';
+import { title } from 'process';
 
 interface FormErrors {
   email?: string;

@@ -4,6 +4,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Noto_Sans } from 'next/font/google';
 import { UserUploadDataProvider } from '@/context/UserUploadDataContext';
+import { Toaster } from '@/components/ui/toaster';
 
 const noto_sans = Noto_Sans({
   subsets: ['latin'],
@@ -31,7 +32,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <UserUploadDataProvider>{children}</UserUploadDataProvider>
+            <UserUploadDataProvider>
+              {children}
+              <Toaster />
+            </UserUploadDataProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

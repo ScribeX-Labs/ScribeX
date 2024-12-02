@@ -1,6 +1,5 @@
 'use client';
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
-import { toast } from 'sonner';
 import { usePathname, useRouter } from 'next/navigation';
 import ProtectedRoute from './ProtectedRoute';
 import {
@@ -13,10 +12,11 @@ import {
   User,
   sendPasswordResetEmail,
   getAuth,
-  deleteUser
+  deleteUser,
 } from 'firebase/auth';
-import { doc, deleteDoc } from "firebase/firestore";
+import { doc, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
+import { toast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
@@ -50,10 +50,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       setUser(userCredential.user);
-      toast.success('Login successful');
+      toast({
+        title: 'Login successful',
+        description: 'You have successfully logged in',
+      });
       router.push('/providers');
     } catch (error: any) {
-      toast.error(error.message);
+      toast({
+        title: 'Login failed',
+        description: error.message,
+      });
     }
   };
 
@@ -61,10 +67,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       setUser(userCredential.user);
-      toast.success('User created successfully');
+      toast({
+        title: 'Account created',
+        description: 'You have successfully created an account',
+      });
       router.push('/providers');
     } catch (error: any) {
-      toast.error(error.message);
+      toast({
+        title: 'Account creation failed',
+        description: error.message,
+      });
     }
   };
 
@@ -73,18 +85,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const result = await signInWithPopup(auth, provider);
       setUser(result.user);
-      toast.success('Login with Google successful');
+      toast({
+        title: 'Login successful',
+        description: 'You have successfully logged in',
+      });
     } catch (error: any) {
-      toast.error(error.message);
+      toast({
+        title: 'Login failed',
+        description: error.message,
+      });
     }
   };
 
   const forgotPassword = async (email: string) => {
     try {
       await sendPasswordResetEmail(auth, email);
-      toast.success('Password reset email sent');
+      toast({
+        title: 'Password reset email sent',
+        description: 'Check your email for instructions on how to reset your password',
+      });
     } catch (error: any) {
-      toast.error(error.message);
+      toast({
+        title: 'Failed to send password reset email',
+        description: error.message,
+      });
     }
   };
 
@@ -92,49 +116,62 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await signOut(auth);
       setUser(null);
-      toast.success('Logout successful');
+
+      toast({
+        title: 'Logout successful',
+        description: 'You have successfully logged out',
+      });
       router.push('/login');
     } catch (error: any) {
-      toast.error('Failed to log out');
+      toast({
+        title: 'Logout failed',
+        description: error.message,
+      });
     }
   };
 
   const deleteTranscription = async (id: string) => {
-    try{
-      await deleteDoc(doc(db, "transcription", id));
-      toast.success("Transcription deleted successfully")
-    }catch(error){
-      console.error("Error deleting transcription", error);
-      toast.error("Fao;ed to delete transcription")
-    }
-  }
-  
-  const deleteChat = async (id: string): Promise<void> => {
-    try{
-      const chatDocRef = doc(db, "chats", id);
-      await deleteDoc(chatDocRef);
-      console.log(`Chat with id ${id} deleted successfully`)
-    }catch(error){
-      console.error("Erorr deleting chat: ", error);
-      throw new Error("Failed to delete chat")
-    }
-  }
+    try {
+      await deleteDoc(doc(db, 'transcription', id));
 
-  const deleteSelf = async () => {
-    try{
-      console.log("inside the try curly braces")
-      if (user) {
-        await deleteUser(user);
-        console.log("User deleted");
-      } else {
-        throw new Error("No user to delete");
-      }
-      console.log("User deleted")
-    }catch(error){
-      console.log("There is an error whilst attempting to delete user, ", error)
+      toast({
+        title: 'Transcription deleted',
+        description: 'Transcription deleted successfully',
+      });
+    } catch (error) {
+      console.error('Error deleting transcription', error);
+      toast({
+        title: 'Failed to delete transcription',
+        description: 'An error occurred while deleting transcription',
+      });
     }
   };
 
+  const deleteChat = async (id: string): Promise<void> => {
+    try {
+      const chatDocRef = doc(db, 'chats', id);
+      await deleteDoc(chatDocRef);
+      console.log(`Chat with id ${id} deleted successfully`);
+    } catch (error) {
+      console.error('Erorr deleting chat: ', error);
+      throw new Error('Failed to delete chat');
+    }
+  };
+
+  const deleteSelf = async () => {
+    try {
+      console.log('inside the try curly braces');
+      if (user) {
+        await deleteUser(user);
+        console.log('User deleted');
+      } else {
+        throw new Error('No user to delete');
+      }
+      console.log('User deleted');
+    } catch (error) {
+      console.log('There is an error whilst attempting to delete user, ', error);
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -153,7 +190,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         createUser,
         loginWithGoogle,
         forgotPassword,
-        deleteSelf,  // Include deleteSelf in the context
+        deleteSelf, // Include deleteSelf in the context
         deleteTranscription, // this is used to deleteTranscription from database
         deleteChat,
         isLoading,
