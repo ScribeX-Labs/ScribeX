@@ -1,6 +1,6 @@
 'use client'
-import { FileText, Home, Share2, Brain, Settings, Bell, Download } from 'lucide-react';
-import  {useState} from 'react';
+import { Home, User } from 'lucide-react';
+import { useState } from 'react';
 import Avatar from './Avatar';
 import {
   Sidebar,
@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/sidebar';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { Button } from './ui/button';
+import ScribeLogo from './ScribeLogo';
 
 const items = [
   {
@@ -24,14 +26,13 @@ const items = [
   {
     title: 'Profile',
     url: '/dashboard/profile',
-    icon: Settings,
+    icon: User,
   },
 ];
 
 export function AppSidebar() {
   const { user, logout } = useAuth();
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-
 
   const togglePopup = () => {
     setIsPopupOpen(!isPopupOpen);
@@ -41,7 +42,10 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Scribe</SidebarGroupLabel>
+          <SidebarGroupLabel>
+            <ScribeLogo className="mr-2 h-6 w-6" />
+            Scribe
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (
@@ -76,13 +80,9 @@ export function AppSidebar() {
 
       {/* Popup Dropdown */}
       {isPopupOpen && (
-        <div className="absolute bottom-16 left-0 z-50 w-full rounded-md bg-white shadow-md">
+        <div className="absolute bottom-16 left-0 z-50 w-full rounded-md shadow-md">
           <ul className="p-2">
-            <li className="p-2 hover:bg-gray-100">
-              <button onClick={logout} className="w-full text-left text-black">
-                Log out
-              </button>
-            </li>
+            <Button onClick={logout}>Log out</Button>
           </ul>
         </div>
       )}
