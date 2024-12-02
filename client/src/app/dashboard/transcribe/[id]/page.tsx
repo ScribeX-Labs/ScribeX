@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Bot, Download, Share, FileOutput } from 'lucide-react';
+import { Bot, Download, Share, FileOutput, ArrowUp, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StatusInfoDialog } from '@/components/status-info-dialog';
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import { useAuth } from '@/context/AuthContext';
 import { FileData, useUserUploadData } from '@/context/UserUploadDataContext';
+import ScribeLogo from '@/components/ScribeLogo';
 
 interface Message {
   role: 'user' | 'bot';
@@ -451,7 +452,12 @@ function Page({ params: { id } }: { params: { id: string } }) {
       <div className="fixed bottom-5 right-5 flex flex-col items-end">
         {isChatOpen && (
           <div className="mb-4 w-96 overflow-hidden rounded-lg border border-border bg-background shadow-lg">
-            <div className="bg-primary p-3 font-bold text-primary-foreground">Chat with Scribe</div>
+            <div className="flex items-center justify-between bg-primary p-3 font-bold text-primary-foreground">
+              <span>Chat with Scribe</span>
+              <Button size="icon" variant="ghost" onClick={() => setIsChatOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
             <div
               ref={chatContainerRef} // Attach the ref here
               className="h-72 space-y-2 overflow-y-auto p-4"
@@ -477,7 +483,7 @@ function Page({ params: { id } }: { params: { id: string } }) {
                 className="mr-2 flex-grow"
               />
               <Button type="submit" size="sm" disabled={status === 'processing'}>
-                <Bot className="h-4 w-4" />
+                <ArrowUp className="h-4 w-4" />
               </Button>
             </form>
           </div>
@@ -498,10 +504,10 @@ function Page({ params: { id } }: { params: { id: string } }) {
             });
           }}
           variant="outline"
-          size="icon"
           aria-label="Toggle chat"
         >
-          <Bot className="h-6 w-6 text-primary" />
+          <ScribeLogo className="h-6 w-6 text-primary" />
+          Chat with Scribe
         </Button>
       </div>
     </div>
