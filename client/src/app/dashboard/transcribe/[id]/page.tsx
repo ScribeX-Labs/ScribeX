@@ -46,7 +46,7 @@ function Page({ params: { id } }: { params: { id: string } }) {
   const [fileData, setFileData] = useState<FileData | null>(null);
 
   const { user } = useAuth();
-  const { getFileById } = useUserUploadData();
+  const { getFileById, updateFile } = useUserUploadData();
 
   const [fileUrlLoaded, setFileUrlLoaded] = useState(false);
   const [transcriptionStatus, setTranscriptionStatus] = useState<TranscriptionStatus | null>(null);
@@ -208,6 +208,10 @@ function Page({ params: { id } }: { params: { id: string } }) {
     }
   }, [chatMessages]);
 
+  useEffect(() => {
+    setTranscriptRating(fileData?.rating || 0);
+  }, [fileData]);
+
   // Function to send message to AI
   const sendMessageToAI = async (message: string): Promise<string> => {
     try {
@@ -329,7 +333,11 @@ function Page({ params: { id } }: { params: { id: string } }) {
 
   const handleRate = (rating: number) => {
     setTranscriptRating(rating);
-    // Here you could send the rating to your backend
+    if (fileData) {
+      if (fileData?.id) {
+        updateFile(fileData.id, { rating });
+      }
+    }
     console.log(`Transcript rated: ${rating} stars`);
   };
 
@@ -342,7 +350,7 @@ function Page({ params: { id } }: { params: { id: string } }) {
           </h1>
         </div>
       </div>
-      <div>
+      <div className="w-full max-w-5xl space-y-4">
         <div className="mb-4">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <div className="flex items-center">
@@ -409,25 +417,25 @@ function Page({ params: { id } }: { params: { id: string } }) {
         <div className="w-full max-w-5xl space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex space-x-2">
-              <Button onClick={() => handleAction('Download')} aria-label="Download">
+              {/* <Button onClick={() => handleAction('Download')} aria-label="Download">
                 <Download className="mr-2 h-4 w-4" />
                 Download
-              </Button>
+              </Button> */}
               <Button onClick={() => handleAction('Export')} aria-label="Export">
                 <FileOutput className="mr-2 h-4 w-4" />
-                Export
+                Export Transcript
               </Button>
               <Button onClick={() => handleAction('Share')} aria-label="Share">
                 <Share className="mr-2 h-4 w-4" />
                 Share
               </Button>
-              <Button
+              {/* <Button
                 onClick={() => handleAction('Export with captions')}
                 aria-label="Export with captions"
               >
                 <FileOutput className="mr-2 h-4 w-4" />
                 Export w/ captions
-              </Button>
+              </Button> */}
             </div>
           </div>
 

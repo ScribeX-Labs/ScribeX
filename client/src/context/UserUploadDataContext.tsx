@@ -17,6 +17,7 @@ interface UserUploadDataContextType {
   getVideoFiles: () => Promise<FileData[]>;
   getAllFiles: () => Promise<AllFiles>;
   getFileById: (fileId: string) => Promise<FileData | null>;
+  updateFile: (fileId: string, fileData: Partial<FileData>) => Promise<void>;
 }
 
 export interface FileData {
@@ -28,6 +29,7 @@ export interface FileData {
   upload_timestamp: Timestamp;
   user_id: string;
   text_id?: string;
+  rating?: number;
 }
 
 export interface AllFiles {
@@ -139,6 +141,33 @@ export const UserUploadDataProvider: React.FC<{ children: ReactNode }> = ({ chil
     }
   };
 
+  const updateFile = async (fileId: string, fileData: Partial<FileData>) => {
+    try {
+      if (!user) throw new Error('User not authenticated');
+      const audioColRef = collection(firestore, 'uploads', user.uid, 'audio_files');
+      const videoColRef = collection(firestore, 'uploads', user.uid, 'video_files');
+
+      const [audioSnapshot, videoSnapshot] = await Promise.all([
+        getDocs(audioColRef),
+        getDocs(videoColRef),
+      ]);
+
+      const audioFile = audioSnapshot.docs.find((doc) => doc.id === fileId);
+      if (audioFile) {
+        await updateDoc(audioFile.ref, fileData);
+        return;
+      }
+
+      const videoFile = videoSnapshot.docs.find((doc) => doc.id === fileId);
+      if (videoFile) {
+        await updateDoc(videoFile.ref, fileData);
+        return;
+      }
+    } catch (error: any) {
+      console.error('Error updating file:', error.message);
+    }
+  };
+
   return (
     <UserUploadDataContext.Provider
       value={{
@@ -148,6 +177,7 @@ export const UserUploadDataProvider: React.FC<{ children: ReactNode }> = ({ chil
         getVideoFiles,
         getAllFiles,
         getFileById,
+        updateFile,
       }}
     >
       {children}
