@@ -1,5 +1,6 @@
 'use client';
 import ProfileCard from '@/components/ProfileCard';
+import SubscriptionCard from '@/components/subscription-card';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -30,7 +31,7 @@ const ProfilePage: FC = () => {
   return (
     <div className="container mx-auto p-4">
       <div className="flex flex-col gap-6 md:flex-row">
-        <aside className="w-full">
+        <aside className="w-full md:w-1/2">
           <ProfileCard
             name={user?.displayName ?? 'Add Username'}
             email={user?.email ?? 'Add Email'}
@@ -38,7 +39,9 @@ const ProfilePage: FC = () => {
             photoUrl={user?.photoURL ?? undefined} // Pass the profile picture URL
           />
         </aside>
-        <div className="w-full"></div>
+        <div className="w-full md:w-1/2">
+          <SubscriptionCard />
+        </div>
       </div>
     </div>
   );
