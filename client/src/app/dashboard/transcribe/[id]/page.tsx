@@ -1,7 +1,22 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Bot, Download, Share, FileOutput, ArrowUp, X } from 'lucide-react';
+import {
+  Bot,
+  Download,
+  Share,
+  FileOutput,
+  ArrowUp,
+  X,
+  ArrowLeft,
+  Send,
+  RotateCcw,
+  FileAudio,
+  FileVideo,
+  Sparkles,
+  ThumbsUp,
+  FileText,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StatusInfoDialog } from '@/components/status-info-dialog';
@@ -17,6 +32,18 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { FileData, useUserUploadData } from '@/context/UserUploadDataContext';
 import ScribeLogo from '@/components/ScribeLogo';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 interface Message {
   role: 'user' | 'bot';
@@ -35,7 +62,7 @@ interface TranscriptionStatus {
 }
 
 function Page({ params: { id } }: { params: { id: string } }) {
-  const [status, setStatus] = useState<'success' | 'processing' | 'failed'>('success');
+  const [status, setStatus] = useState<'success' | 'processing' | 'failed'>('processing');
   const [text, setText] = useState<string>('');
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
@@ -43,8 +70,10 @@ function Page({ params: { id } }: { params: { id: string } }) {
   const [isRatingOpen, setIsRatingOpen] = useState(false);
   const [transcriptRating, setTranscriptRating] = useState(0);
   const [currentTextId, setCurrentTextId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'transcript' | 'chat'>('transcript');
 
   const [fileData, setFileData] = useState<FileData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const { user } = useAuth();
   const { getFileById, updateFile } = useUserUploadData();
@@ -53,8 +82,8 @@ function Page({ params: { id } }: { params: { id: string } }) {
   const [transcriptionStatus, setTranscriptionStatus] = useState<TranscriptionStatus | null>(null);
   const [isPolling, setIsPolling] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement | null>(null); // Ref for chat container
+  const [processingPercentage, setProcessingPercentage] = useState(0);
 
-  // You should get this from your auth context/provider
   // Function to upload initial text
   const uploadText = async (text: string) => {
     try {
@@ -105,6 +134,23 @@ function Page({ params: { id } }: { params: { id: string } }) {
     }
   };
 
+  // Simulate transcript processing progress
+  useEffect(() => {
+    if (status === 'processing') {
+      const interval = setInterval(() => {
+        setProcessingPercentage((prev) => {
+          // Cap at 95% until actually complete
+          const newValue = prev + (1 + Math.random() * 2);
+          return Math.min(newValue, 95);
+        });
+      }, 800);
+
+      return () => clearInterval(interval);
+    } else if (status === 'success') {
+      setProcessingPercentage(100);
+    }
+  }, [status]);
+
   const checkTranscriptionStatus = async () => {
     if (!fileData?.id || !user?.uid) return;
 
@@ -143,8 +189,10 @@ function Page({ params: { id } }: { params: { id: string } }) {
   // Initialize polling when component mounts
   useEffect(() => {
     const initializePolling = async () => {
+      setIsLoading(true);
       const data = await getFileById(id);
       setFileData(data);
+      setIsLoading(false);
 
       if (data?.id && user?.uid) {
         setIsPolling(true);
@@ -172,9 +220,9 @@ function Page({ params: { id } }: { params: { id: string } }) {
       }
     };
   }, [isPolling, fileData?.id, user?.uid]);
+
   // Upload text when it changes
   useEffect(() => {
-    getFileById(id).then((data) => setFileData(data));
     if (text && !currentTextId) {
       uploadText(text);
     }
@@ -190,9 +238,11 @@ function Page({ params: { id } }: { params: { id: string } }) {
   useEffect(() => {
     if (fileData && !fileUrlLoaded) {
       updateMediaURL(fileData.file_url).then((data) => {
-        fileData.file_url = data.new_file_url;
-        setFileData(fileData);
-        setFileUrlLoaded(true);
+        if (data) {
+          fileData.file_url = data.new_file_url;
+          setFileData(fileData);
+          setFileUrlLoaded(true);
+        }
       });
     }
   }, [fileData]);
@@ -247,269 +297,346 @@ function Page({ params: { id } }: { params: { id: string } }) {
   const loadChatHistory = async (textId: string) => {
     try {
       setStatus('processing');
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/ai/conversation/${textId}?user_id=${user?.uid}&file_id=${fileData?.id}&file_type=${fileData?.content_type.split('/')[0]}`,
-      );
-
-      if (!response.ok) throw new Error('Failed to load chat history');
-
-      const data = await response.json();
-
-      // Convert the conversation history format to match our Message interface
-      const formattedMessages: Message[] = data.conversation.flatMap((entry: any) => [
-        { role: 'user', content: entry.question },
-        { role: 'bot', content: entry.answer },
-      ]);
-
-      setChatMessages(formattedMessages);
-      setText(data.text);
-      setStatus('success');
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ai/history/${textId}`);
+      if (response.ok) {
+        const data = await response.json();
+        const formattedMessages: Message[] = [];
+        for (let i = 0; i < data.questions.length; i++) {
+          formattedMessages.push({ role: 'user', content: data.questions[i] });
+          if (i < data.answers.length) {
+            formattedMessages.push({ role: 'bot', content: data.answers[i] });
+          }
+        }
+        setChatMessages(formattedMessages);
+      }
+      if (status !== 'success') {
+        setStatus('success');
+      }
     } catch (error) {
       console.error('Error loading chat history:', error);
-      setStatus('failed');
+      if (status !== 'success') {
+        setStatus('failed');
+      }
     }
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputMessage.trim()) {
-      setChatMessages((prev) => [...prev, { role: 'user', content: inputMessage }]);
-      setInputMessage('');
-      setStatus('processing');
+    if (!inputMessage.trim()) return;
 
-      const aiResponse = await sendMessageToAI(inputMessage);
+    const userMessage = inputMessage.trim();
+    setInputMessage('');
 
-      setChatMessages((prev) => [...prev, { role: 'bot', content: aiResponse }]);
-      setStatus('success');
-    }
+    // Add user message to chat
+    setChatMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
+
+    // Add loading message for bot
+    setChatMessages((prev) => [...prev, { role: 'bot', content: '...' }]);
+
+    // Get response from AI
+    const botResponse = await sendMessageToAI(userMessage);
+
+    // Update bot response
+    setChatMessages((prev) => {
+      const newMessages = [...prev];
+      newMessages[newMessages.length - 1] = { role: 'bot', content: botResponse };
+      return newMessages;
+    });
   };
 
   const handleAction = async (action: string) => {
-    if (action === 'Share' && currentTextId) {
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/ai/conversation/${currentTextId}?user_id=${user?.uid}`,
-        );
-        if (!response.ok) throw new Error('Failed to get conversation history');
-
-        const data = await response.json();
-        console.log('Conversation history:', data);
-
-        // Create shareable URL
-        const shareUrl = new URL(window.location.href);
-        shareUrl.searchParams.set('textId', currentTextId);
-
-        // Use native share if available, fallback to clipboard
-        if (navigator.share) {
-          await navigator.share({
-            title: 'Shared Conversation',
-            url: shareUrl.toString(),
-          });
-        } else {
-          await navigator.clipboard.writeText(shareUrl.toString());
-          // You might want to add a toast notification here
-          alert('Link copied to clipboard!');
-        }
-      } catch (error) {
-        console.error('Error sharing:', error);
+    try {
+      if (action === 'export') {
+        // Logic for exporting transcript
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${fileData?.original_filename.split('.')[0] || 'transcript'}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else if (action === 'rate') {
+        setIsRatingOpen(true);
       }
-    }
-
-    if (action === 'Download') {
-      const link = document.createElement('a');
-      link.setAttribute('href', fileData?.file_url || '');
-      link.setAttribute('download', fileData?.original_filename || '');
-      link.click();
-    }
-
-    if (action === 'Export') {
-      const blob = new Blob([text], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `${fileData?.original_filename} transcript.txt`);
-      link.click();
+    } catch (error) {
+      console.error(`Error handling ${action}:`, error);
     }
   };
 
   const handleRate = (rating: number) => {
     setTranscriptRating(rating);
-    if (fileData) {
-      if (fileData?.id) {
-        updateFile(fileData.id, { rating });
-      }
+    setIsRatingOpen(false);
+
+    if (fileData?.id) {
+      updateFile(fileData.id, { rating });
     }
-    console.log(`Transcript rated: ${rating} stars`);
   };
 
-  return (
-    <div className="flex w-full flex-col items-center justify-center p-4">
-      <div className="w-full max-w-5xl space-y-4">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold">
-            {fileData?.original_filename || 'Transcription'} - {fileData?.content_type}
-          </h1>
+  const getFileIcon = () => {
+    const isAudio = fileData?.content_type.includes('audio');
+    return isAudio ? <FileAudio className="h-5 w-5" /> : <FileVideo className="h-5 w-5" />;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="rounded-full" asChild>
+              <Link href="/dashboard">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <Skeleton className="h-8 w-64" />
+          </div>
+          <Skeleton className="h-9 w-28" />
+        </div>
+
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
+          <div className="lg:col-span-3">
+            <div className="space-y-4">
+              <Skeleton className="h-64 w-full rounded-xl" />
+              <Skeleton className="h-32 w-full rounded-xl" />
+            </div>
+          </div>
+          <div className="lg:col-span-2">
+            <Skeleton className="h-96 w-full rounded-xl" />
+          </div>
         </div>
       </div>
-      <div className="w-full max-w-5xl space-y-4">
-        <div className="mb-4">
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <div className="flex items-center">
-              <StatusInfoDialog
-                status={
-                  transcriptionStatus?.status === 'IN_PROGRESS'
-                    ? 'processing'
-                    : transcriptionStatus?.status === 'COMPLETED'
-                      ? 'success'
-                      : 'failed'
-                }
-              />
-              <span className="ml-2">
-                Status:
-                {transcriptionStatus?.status === 'IN_PROGRESS'
-                  ? ' In Progress'
-                  : transcriptionStatus?.status === 'COMPLETED'
-                    ? ' Completed'
-                    : ' Failed'}
-              </span>
-            </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline">Rate Transcript</Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Rate the Transcript</DialogTitle>
-                  <DialogDescription>
-                    How would you rate the quality of this transcript?
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="py-4">
-                  <StarRating onRate={handleRate} />
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-          {transcriptRating > 0 && (
-            <div className="text-sm text-muted-foreground">
-              You rated this transcript: {transcriptRating} stars
-            </div>
-          )}
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" className="rounded-full" asChild>
+            <Link href="/dashboard">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <h1 className="flex items-center gap-2 text-2xl font-bold">
+            <div className="file-icon">{getFileIcon()}</div>
+            <span className="max-w-md truncate">{fileData?.original_filename}</span>
+          </h1>
         </div>
-        {fileUrlLoaded ? (
-          <div className="mb-4 w-full max-w-5xl space-y-4">
-            {fileData?.content_type.startsWith('video') ? (
-              <video controls className="w-full rounded-lg">
-                <source src={fileData.file_url} type={fileData.content_type} />
-                Your browser does not support the video tag.
-              </video>
-            ) : fileData?.content_type.startsWith('audio') ? (
-              <audio controls className="w-full rounded-lg">
-                <source src={fileData.file_url} type={fileData.content_type} />
-                Your browser does not support the audio element.
-              </audio>
-            ) : (
-              <p>Unsupported file type</p>
-            )}
-          </div>
-        ) : (
-          <p>Loading...</p>
-        )}
-        <div className="w-full max-w-5xl space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex space-x-2">
-              {/* <Button onClick={() => handleAction('Download')} aria-label="Download">
-                <Download className="mr-2 h-4 w-4" />
-                Download
-              </Button> */}
-              <Button onClick={() => handleAction('Export')} aria-label="Export">
-                <FileOutput className="mr-2 h-4 w-4" />
-                Export Transcript
-              </Button>
-              <Button onClick={() => handleAction('Share')} aria-label="Share">
-                <Share className="mr-2 h-4 w-4" />
-                Share
-              </Button>
-              {/* <Button
-                onClick={() => handleAction('Export with captions')}
-                aria-label="Export with captions"
-              >
-                <FileOutput className="mr-2 h-4 w-4" />
-                Export w/ captions
-              </Button> */}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="gap-2 rounded-full hover:bg-primary/5"
+            onClick={() => handleAction('rate')}
+          >
+            <ThumbsUp className="h-4 w-4" />
+            Rate
+          </Button>
+          <Button
+            variant="outline"
+            className="gap-2 rounded-full hover:bg-primary/5"
+            onClick={() => handleAction('export')}
+          >
+            <FileText className="h-4 w-4" />
+            Export
+          </Button>
+        </div>
+      </div>
+
+      <div className="relative">
+        <div className="absolute -left-40 -top-20 -z-10 h-80 w-80 rounded-full bg-primary/10 blur-[80px]"></div>
+        <div className="absolute -bottom-40 -right-20 -z-10 h-80 w-80 rounded-full bg-secondary/10 blur-[80px]"></div>
+
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
+          {/* Video Player and Transcript */}
+          <div className="lg:col-span-3">
+            <div className="space-y-6">
+              {/* Video/Audio Player */}
+              <Card className="overflow-hidden border-2 shadow-lg">
+                <div className="relative aspect-video w-full bg-black/90">
+                  {fileData?.content_type.includes('video') ? (
+                    <video src={fileData?.file_url} className="h-full w-full" controls></video>
+                  ) : (
+                    <div className="flex h-full flex-col items-center justify-center bg-gradient-to-br from-primary/5 to-secondary/5 p-4">
+                      <div className="mb-4 rounded-full bg-primary/10 p-6">
+                        <FileAudio className="h-12 w-12 text-primary" />
+                      </div>
+                      <audio src={fileData?.file_url} className="w-full max-w-md" controls></audio>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              {/* Transcript Card */}
+              <Card className="gradient-border overflow-hidden border-2 shadow-lg">
+                <CardHeader className="flex flex-row items-center justify-between pb-3">
+                  <div>
+                    <CardTitle>Transcript</CardTitle>
+                    <CardDescription>
+                      {status === 'processing'
+                        ? 'Processing your media file...'
+                        : status === 'failed'
+                          ? 'Transcription failed'
+                          : 'Transcription completed'}
+                    </CardDescription>
+                  </div>
+                  {status === 'success' && (
+                    <div className="flex items-center gap-1 rounded-full bg-gradient-to-r from-primary/20 to-secondary/20 px-3 py-1 text-xs font-medium text-primary">
+                      <Sparkles className="h-3 w-3" /> AI Enhanced
+                    </div>
+                  )}
+                </CardHeader>
+
+                <CardContent>
+                  {status === 'processing' && (
+                    <div className="space-y-4 py-6">
+                      <div className="flex animate-pulse flex-col items-center justify-center text-center">
+                        <div className="rounded-full bg-gradient-to-r from-primary/20 to-secondary/20 p-4">
+                          <RotateCcw className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                        <h3 className="mt-4 text-lg font-medium">Processing your transcript</h3>
+                        <p className="text-sm text-muted-foreground">
+                          This may take a few minutes depending on the length of your media
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span>Processing...</span>
+                          <span>{Math.round(processingPercentage)}%</span>
+                        </div>
+                        <Progress
+                          value={processingPercentage}
+                          className="h-2 overflow-hidden bg-secondary/10"
+                        >
+                          <div className="h-full w-full bg-gradient-to-r from-primary to-secondary" />
+                        </Progress>
+                      </div>
+                    </div>
+                  )}
+
+                  {status === 'failed' && (
+                    <div className="flex flex-col items-center justify-center py-6 text-center">
+                      <div className="rounded-full bg-destructive/10 p-4">
+                        <X className="h-8 w-8 text-destructive" />
+                      </div>
+                      <h3 className="mt-4 text-lg font-medium">Transcription Failed</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {transcriptionStatus?.failure_reason ||
+                          "We couldn't process your file. Please try again or upload a different file."}
+                      </p>
+                      <Button className="button-glow mt-4 rounded-full" asChild>
+                        <Link href="/dashboard/upload">Try Another File</Link>
+                      </Button>
+                    </div>
+                  )}
+
+                  {status === 'success' && (
+                    <div className="max-h-[400px] overflow-y-auto rounded-md border bg-muted/40 p-4 shadow-inner">
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{text}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
 
-          <textarea
-            className="h-96 w-full rounded-lg border border-gray-300 bg-background p-4 text-foreground focus:border-transparent focus:ring-2 focus:ring-blue-500"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Paste or type your text here..."
-            aria-label="Content input area"
-          />
+          {/* AI Chat */}
+          <div className="lg:col-span-2">
+            <Card className="flex h-full flex-col overflow-hidden border-2 shadow-lg">
+              <CardHeader className="flex-shrink-0 border-b bg-gradient-to-r from-primary/5 to-secondary/5 pb-3">
+                <CardTitle className="flex items-center gap-2">
+                  <div className="rounded-full bg-primary/10 p-1">
+                    <Bot className="h-5 w-5 text-primary" />
+                  </div>
+                  AI Assistant
+                </CardTitle>
+                <CardDescription>
+                  Ask questions about the transcript to get insights
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="flex-1 overflow-hidden p-0">
+                <div
+                  ref={chatContainerRef}
+                  className="scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-primary/10 hover:scrollbar-thumb-primary/20 flex h-[500px] flex-col space-y-4 overflow-y-auto p-4"
+                >
+                  {chatMessages.length === 0 ? (
+                    <div className="flex h-full flex-col items-center justify-center p-6 text-center">
+                      <div className="glass-effect rounded-full p-4">
+                        <Bot className="h-8 w-8 text-primary" />
+                      </div>
+                      <h3 className="gradient-text mt-4 text-xl font-medium">Ask me anything</h3>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        I can help you analyze the transcript, answer questions, and provide
+                        insights about your content.
+                      </p>
+                    </div>
+                  ) : (
+                    chatMessages.map((message, index) => (
+                      <div
+                        key={index}
+                        className={`flex ${
+                          message.role === 'user' ? 'justify-end' : 'justify-start'
+                        }`}
+                      >
+                        <div
+                          className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                            message.role === 'user'
+                              ? 'bg-gradient-to-r from-primary to-primary/90 text-primary-foreground'
+                              : 'glass-effect'
+                          }`}
+                        >
+                          {message.content === '...' ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="h-2 w-2 animate-bounce rounded-full bg-current"></div>
+                              <div className="h-2 w-2 animate-bounce rounded-full bg-current [animation-delay:0.2s]"></div>
+                              <div className="h-2 w-2 animate-bounce rounded-full bg-current [animation-delay:0.4s]"></div>
+                            </div>
+                          ) : (
+                            <p className="whitespace-pre-wrap">{message.content}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </CardContent>
+
+              <CardFooter className="flex-shrink-0 border-t bg-gradient-to-r from-muted/50 to-background p-4">
+                <form onSubmit={handleSendMessage} className="flex w-full gap-2">
+                  <Input
+                    placeholder="Ask a question about the transcript..."
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    className="flex-1 rounded-full border-primary/20 focus:border-primary/50 focus:ring-primary/20"
+                    disabled={status !== 'success'}
+                  />
+                  <Button
+                    type="submit"
+                    className="button-glow rounded-full"
+                    disabled={!inputMessage.trim() || status !== 'success'}
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </form>
+              </CardFooter>
+            </Card>
+          </div>
         </div>
       </div>
-      <div className="fixed bottom-5 right-5 flex flex-col items-end">
-        {isChatOpen && (
-          <div className="mb-4 w-96 overflow-hidden rounded-lg border border-border bg-background shadow-lg">
-            <div className="flex items-center justify-between bg-primary p-3 font-bold text-primary-foreground">
-              <span>Chat with Scribe</span>
-              <Button size="icon" variant="ghost" onClick={() => setIsChatOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div
-              ref={chatContainerRef} // Attach the ref here
-              className="h-72 space-y-2 overflow-y-auto p-4"
-            >
-              {chatMessages.map((msg, index) => (
-                <div key={index} className={`${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                  <span
-                    className={`inline-block rounded-lg p-2 ${
-                      msg.role === 'user' ? 'bg-primary/10' : 'bg-muted'
-                    }`}
-                  >
-                    {msg.content}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <form onSubmit={handleSendMessage} className="flex border-t border-border p-4">
-              <Input
-                type="text"
-                placeholder="Type a message..."
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                className="mr-2 flex-grow"
-              />
-              <Button type="submit" size="sm" disabled={status === 'processing'}>
-                <ArrowUp className="h-4 w-4" />
-              </Button>
-            </form>
+
+      {/* Rating Dialog */}
+      <Dialog open={isRatingOpen} onOpenChange={setIsRatingOpen}>
+        <DialogContent className="glass-effect sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Rate Transcript</DialogTitle>
+            <DialogDescription>
+              How would you rate the quality of this transcript?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center py-6">
+            <StarRating maxRating={5} rating={transcriptRating} onChange={handleRate} size={32} />
           </div>
-        )}
-        <Button
-          onClick={() => {
-            setIsChatOpen((prev) => {
-              const newState = !prev;
-              if (newState) {
-                setTimeout(() => {
-                  chatContainerRef.current?.scrollTo({
-                    top: chatContainerRef.current?.scrollHeight,
-                    behavior: 'smooth',
-                  });
-                }, 0); // Timeout ensures the chat container is rendered before scrolling
-              }
-              return newState;
-            });
-          }}
-          variant="outline"
-          aria-label="Toggle chat"
-        >
-          <ScribeLogo className="h-6 w-6 text-primary" />
-          Chat with Scribe
-        </Button>
-      </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

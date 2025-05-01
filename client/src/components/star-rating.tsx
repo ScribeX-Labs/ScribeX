@@ -1,31 +1,46 @@
 import { useState } from 'react'
 import { Star } from 'lucide-react'
 
-interface StarRatingProps {
-  onRate: (rating: number) => void
+export interface StarRatingProps {
+  maxRating?: number;
+  rating?: number;
+  onChange: (rating: number) => void;
+  size?: number;
+  onRate?: (rating: number) => void; // For backward compatibility
 }
 
-export function StarRating({ onRate }: StarRatingProps) {
-  const [rating, setRating] = useState(0)
-  const [hover, setHover] = useState(0)
+export function StarRating({
+  maxRating = 5,
+  rating: initialRating = 0,
+  onChange,
+  size = 24,
+  onRate,
+}: StarRatingProps) {
+  const [rating, setRating] = useState(initialRating);
+  const [hover, setHover] = useState(0);
+
+  // Handle the rating change
+  const handleRate = (value: number) => {
+    setRating(value);
+    onChange(value);
+    if (onRate) onRate(value); // For backward compatibility
+  };
 
   return (
     <div className="flex items-center">
-      {[1, 2, 3, 4, 5].map((star) => (
+      {Array.from({ length: maxRating }, (_, i) => i + 1).map((star) => (
         <Star
           key={star}
-          className={`h-6 w-6 cursor-pointer ${
-            star <= (hover || rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'
+          className={`cursor-pointer transition-colors ${
+            star <= (hover || rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
           }`}
-          onClick={() => {
-            setRating(star)
-            onRate(star)
-          }}
+          size={size}
+          onClick={() => handleRate(star)}
           onMouseEnter={() => setHover(star)}
-          onMouseLeave={() => setHover(rating)}
+          onMouseLeave={() => setHover(0)}
         />
       ))}
     </div>
-  )
+  );
 }
 

@@ -2,13 +2,21 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/hooks/use-toast';
-import { title } from 'process';
+import ScribeLogo from '@/components/ScribeLogo';
+import { AlertCircle, Mail, Lock, RotateCcw, ArrowLeft } from 'lucide-react';
 
 interface FormErrors {
   email?: string;
@@ -20,28 +28,6 @@ type AuthFormData = {
   email: string;
   password: string;
 };
-
-interface SignInFormProps {
-  onSubmit: (data: AuthFormData) => Promise<void>;
-  isLoading: boolean;
-  errors: FormErrors;
-  onForgotPassword: () => void;
-  onGoogleSignIn: () => Promise<void>;
-}
-
-interface SignUpFormProps {
-  onSubmit: (data: AuthFormData) => Promise<void>;
-  isLoading: boolean;
-  errors: FormErrors;
-  onGoogleSignIn: () => Promise<void>;
-}
-
-interface ForgotPasswordFormProps {
-  onSubmit: (email: string) => Promise<void>;
-  isLoading: boolean;
-  errors: FormErrors;
-  onBack: () => void;
-}
 
 export default function AuthPage() {
   const [isForgotPassword, setIsForgotPassword] = useState<boolean>(false);
@@ -86,6 +72,10 @@ export default function AuthPage() {
         await createUser(email, password);
       } else if (event.currentTarget.id === 'forgot-password-form') {
         await forgotPassword(email);
+        toast({
+          title: 'Password reset email sent',
+          description: 'Check your inbox for instructions to reset your password.',
+        });
       }
     } catch (error) {
       const err = error as Error;
@@ -102,239 +92,309 @@ export default function AuthPage() {
     }
   };
 
-  const SignInForm: React.FC = () => (
-    <form id="signin-form" onSubmit={handleSubmit} noValidate>
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          data-testid="email-input"
-          placeholder="m@example.com"
-          required
-          aria-invalid={errors.email ? 'true' : 'false'}
-          aria-describedby={errors.email ? 'email-error' : undefined}
-        />
-        {errors.email && (
-          <p
-            className="text-sm text-red-500"
-            data-testid="email-error"
-            id="email-error"
-            role="alert"
-          >
-            {errors.email}
-          </p>
-        )}
-      </div>
-      <div className="mt-4 space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          data-testid="password-input"
-          required
-          aria-invalid={errors.password ? 'true' : 'false'}
-          aria-describedby={errors.password ? 'password-error' : undefined}
-        />
-        {errors.password && (
-          <p
-            className="text-sm text-red-500"
-            data-testid="password-error"
-            id="password-error"
-            role="alert"
-          >
-            {errors.password}
-          </p>
-        )}
-      </div>
-      {errors.general && (
-        <p className="mt-2 text-sm text-red-500" data-testid="general-error" role="alert">
-          {errors.general}
-        </p>
-      )}
-      <Button
-        className="mt-4 w-full"
-        type="submit"
-        data-testid="signin-submit"
-        disabled={isLoading}
-      >
-        {isLoading ? 'Signing In...' : 'Sign In'}
-      </Button>
-      <Button
-        variant="link"
-        className="mt-2 w-full"
-        onClick={() => setIsForgotPassword(true)}
-        type="button"
-      >
-        Forgot password?
-      </Button>
-      <div className="relative my-4">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-        </div>
-      </div>
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={loginWithGoogle}
-        disabled={isLoading}
-        type="button"
-        data-testid="google-signin"
-      >
-        Sign in with Google
-      </Button>
-    </form>
-  );
-
-  const SignUpForm: React.FC = () => (
-    <form id="signup-form" onSubmit={handleSubmit} noValidate>
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          data-testid="email-input"
-          placeholder="m@example.com"
-          required
-          aria-invalid={errors.email ? 'true' : 'false'}
-          aria-describedby={errors.email ? 'email-error' : undefined}
-        />
-        {errors.email && (
-          <p
-            className="text-sm text-red-500"
-            data-testid="email-error"
-            id="email-error"
-            role="alert"
-          >
-            {errors.email}
-          </p>
-        )}
-      </div>
-      <div className="mt-4 space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          data-testid="password-input"
-          required
-          aria-invalid={errors.password ? 'true' : 'false'}
-          aria-describedby={errors.password ? 'password-error' : undefined}
-        />
-        {errors.password && (
-          <p
-            className="text-sm text-red-500"
-            data-testid="password-error"
-            id="password-error"
-            role="alert"
-          >
-            {errors.password}
-          </p>
-        )}
-      </div>
-      <Button
-        className="mt-4 w-full"
-        type="submit"
-        disabled={isLoading}
-        data-testid="signup-submit"
-      >
-        {isLoading ? 'Signing Up...' : 'Sign Up'}
-      </Button>
-      <div className="relative my-4">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
-        </div>
-      </div>
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={loginWithGoogle}
-        disabled={isLoading}
-        type="button"
-        data-testid="google-signup"
-      >
-        Sign up with Google
-      </Button>
-    </form>
-  );
-
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Card className="w-[350px]">
-        <CardHeader>
-          <CardTitle>{isForgotPassword ? 'Reset Password' : 'Welcome'}</CardTitle>
-          <CardDescription>
-            {isForgotPassword
-              ? 'Enter your email to reset your password'
-              : 'Sign in to your account or create a new one'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isForgotPassword ? (
-            <form id="forgot-password-form" onSubmit={handleSubmit} noValidate>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  data-testid="email-input"
-                  placeholder="m@example.com"
-                  required
-                />
-                {errors.email && (
-                  <p className="text-sm text-red-500" data-testid="email-error">
-                    {errors.email}
-                  </p>
-                )}
-              </div>
-              <Button
-                className="mt-4 w-full"
-                type="submit"
-                disabled={isLoading}
-                data-testid="reset-submit"
+    <div className="container relative flex min-h-[80vh] flex-col items-center justify-center px-4">
+      <div className="absolute -top-40 -z-10 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[100px]"></div>
+      <div className="absolute -bottom-40 right-0 -z-10 h-[400px] w-[400px] rounded-full bg-secondary/10 blur-[100px]"></div>
+
+      <div className="w-full max-w-md">
+        <div className="mb-8 flex items-center justify-center">
+          <div className="relative">
+            <div className="absolute -z-10 h-12 w-12 animate-pulse rounded-full bg-primary/20 blur-md"></div>
+            <ScribeLogo className="h-12 w-12 text-primary" />
+          </div>
+          <h1 className="gradient-text ml-2 text-4xl font-bold">Scribe</h1>
+        </div>
+
+        {isForgotPassword ? (
+          <Card className="glass-effect border-none shadow-xl">
+            <CardHeader className="space-y-1 text-center">
+              <CardTitle className="text-2xl">Reset Password</CardTitle>
+              <CardDescription>
+                Enter your email address and we&apos;ll send you a link to reset your password.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form id="forgot-password-form" onSubmit={handleSubmit} noValidate>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium">
+                      Email
+                    </Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="name@example.com"
+                        className="rounded-lg border-primary/20 pl-10 focus:border-primary/50 focus:ring-primary/20"
+                        required
+                        aria-invalid={errors.email ? 'true' : 'false'}
+                      />
+                    </div>
+                    {errors.email && (
+                      <p className="flex items-center text-sm text-destructive" role="alert">
+                        <AlertCircle className="mr-1 h-3 w-3" />
+                        {errors.email}
+                      </p>
+                    )}
+                  </div>
+                  {errors.general && (
+                    <p className="flex items-center text-sm text-destructive" role="alert">
+                      <AlertCircle className="mr-1 h-3 w-3" />
+                      {errors.general}
+                    </p>
+                  )}
+                  <Button
+                    type="submit"
+                    className="button-glow w-full rounded-full"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? <RotateCcw className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Send Reset Link
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="mt-2 w-full rounded-full hover:bg-primary/5"
+                    onClick={() => setIsForgotPassword(false)}
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to login
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="glass-effect border-none shadow-xl">
+            <CardHeader className="space-y-1 text-center">
+              <CardTitle className="text-2xl font-bold">
+                {activeTab === 'signin' ? 'Welcome back' : 'Create your account'}
+              </CardTitle>
+              <CardDescription>
+                {activeTab === 'signin'
+                  ? 'Enter your credentials to sign in'
+                  : 'Enter your information to create an account'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pb-4">
+              <Tabs
+                value={activeTab}
+                onValueChange={(value) => setActiveTab(value as 'signin' | 'signup')}
+                className="w-full"
               >
-                {isLoading ? 'Processing...' : 'Reset Password'}
-              </Button>
+                <TabsList className="grid w-full grid-cols-2 bg-transparent">
+                  <TabsTrigger
+                    value="signin"
+                    className="data-[state=active]:tab-active data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+                  >
+                    Sign In
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="signup"
+                    className="data-[state=active]:tab-active data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+                  >
+                    Sign Up
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="signin">
+                  <form
+                    id="signin-form"
+                    onSubmit={handleSubmit}
+                    noValidate
+                    className="space-y-4 pt-4"
+                  >
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-sm font-medium">
+                        Email
+                      </Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          placeholder="name@example.com"
+                          className="rounded-lg border-primary/20 pl-10 focus:border-primary/50 focus:ring-primary/20"
+                          required
+                          aria-invalid={errors.email ? 'true' : 'false'}
+                        />
+                      </div>
+                      {errors.email && (
+                        <p className="flex items-center text-sm text-destructive" role="alert">
+                          <AlertCircle className="mr-1 h-3 w-3" />
+                          {errors.email}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="password">Password</Label>
+                        <Button
+                          variant="link"
+                          className="h-auto p-0 text-xs"
+                          onClick={() => setIsForgotPassword(true)}
+                          type="button"
+                        >
+                          Forgot password?
+                        </Button>
+                      </div>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="password"
+                          name="password"
+                          type="password"
+                          className="rounded-lg border-primary/20 pl-10 focus:border-primary/50 focus:ring-primary/20"
+                          required
+                          aria-invalid={errors.password ? 'true' : 'false'}
+                        />
+                      </div>
+                      {errors.password && (
+                        <p className="flex items-center text-sm text-destructive" role="alert">
+                          <AlertCircle className="mr-1 h-3 w-3" />
+                          {errors.password}
+                        </p>
+                      )}
+                    </div>
+                    {errors.general && (
+                      <p className="flex items-center text-sm text-destructive" role="alert">
+                        <AlertCircle className="mr-1 h-3 w-3" />
+                        {errors.general}
+                      </p>
+                    )}
+                    <Button
+                      className="button-glow w-full rounded-full"
+                      type="submit"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? <RotateCcw className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Sign In
+                    </Button>
+                  </form>
+                </TabsContent>
+                <TabsContent value="signup">
+                  <form
+                    id="signup-form"
+                    onSubmit={handleSubmit}
+                    noValidate
+                    className="space-y-4 pt-4"
+                  >
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          placeholder="name@example.com"
+                          className="rounded-lg border-primary/20 pl-10 focus:border-primary/50 focus:ring-primary/20"
+                          required
+                          aria-invalid={errors.email ? 'true' : 'false'}
+                        />
+                      </div>
+                      {errors.email && (
+                        <p className="flex items-center text-sm text-destructive" role="alert">
+                          <AlertCircle className="mr-1 h-3 w-3" />
+                          {errors.email}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Password</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="password"
+                          name="password"
+                          type="password"
+                          className="rounded-lg border-primary/20 pl-10 focus:border-primary/50 focus:ring-primary/20"
+                          required
+                          aria-invalid={errors.password ? 'true' : 'false'}
+                        />
+                      </div>
+                      {errors.password && (
+                        <p className="flex items-center text-sm text-destructive" role="alert">
+                          <AlertCircle className="mr-1 h-3 w-3" />
+                          {errors.password}
+                        </p>
+                      )}
+                    </div>
+                    {errors.general && (
+                      <p className="flex items-center text-sm text-destructive" role="alert">
+                        <AlertCircle className="mr-1 h-3 w-3" />
+                        {errors.general}
+                      </p>
+                    )}
+                    <Button
+                      className="button-glow w-full rounded-full"
+                      type="submit"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? <RotateCcw className="mr-2 h-4 w-4 animate-spin" /> : null}
+                      Create Account
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                </div>
+              </div>
+
               <Button
-                variant="link"
-                className="mt-2 w-full"
-                onClick={() => setIsForgotPassword(false)}
+                variant="outline"
+                className="w-full rounded-full"
+                onClick={loginWithGoogle}
+                disabled={isLoading}
                 type="button"
               >
-                Back to Sign In
+                <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+                  <path
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    fill="#4285F4"
+                  />
+                  <path
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    fill="#34A853"
+                  />
+                  <path
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    fill="#FBBC05"
+                  />
+                  <path
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    fill="#EA4335"
+                  />
+                  <path d="M1 1h22v22H1z" fill="none" />
+                </svg>
+                Sign {activeTab === 'signin' ? 'in' : 'up'} with Google
               </Button>
-            </form>
-          ) : (
-            <Tabs
-              defaultValue="signin"
-              className="w-full"
-              value={activeTab}
-              onValueChange={(value) => setActiveTab(value as 'signin' | 'signup')}
-            >
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-              </TabsList>
-              <TabsContent value="signin">
-                <SignInForm />
-              </TabsContent>
-              <TabsContent value="signup">
-                <SignUpForm />
-              </TabsContent>
-            </Tabs>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+            <CardFooter className="flex justify-center p-4 text-center text-sm">
+              <p className="text-muted-foreground">
+                {activeTab === 'signin' ? "Don't have an account? " : 'Already have an account? '}
+                <Button
+                  variant="link"
+                  className="h-auto p-0"
+                  onClick={() => setActiveTab(activeTab === 'signin' ? 'signup' : 'signin')}
+                >
+                  {activeTab === 'signin' ? 'Sign up' : 'Sign in'}
+                </Button>
+              </p>
+            </CardFooter>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

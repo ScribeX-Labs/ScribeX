@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Crown, Info } from 'lucide-react';
+import { Crown, Info, Sparkles, Zap, Clock, FileUp, RotateCcw } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
+import { Skeleton } from './ui/skeleton';
 
 interface Subscription {
   tier: string;
@@ -34,14 +35,14 @@ const DEFAULT_FREE_TIER = {
   user_id: '',
   subscription: {
     tier: 'free',
-    is_active: true
+    is_active: true,
   },
   limits: {
     file_size: 500 * 1024 * 1024, // 500 MB
     duration: 120, // 2 minutes
     file_size_display: '500 MB',
-    duration_display: '2 minutes'
-  }
+    duration_display: '2 minutes',
+  },
 };
 
 export default function SubscriptionCard() {
@@ -55,7 +56,9 @@ export default function SubscriptionCard() {
 
     const fetchSubscription = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/subscriptions/${user.uid}`);
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/subscriptions/${user.uid}`,
+        );
         if (response.ok) {
           const data = await response.json();
           setSubscriptionData(data);
@@ -64,7 +67,7 @@ export default function SubscriptionCard() {
           // Set default free tier data if the API fails
           setSubscriptionData({
             ...DEFAULT_FREE_TIER,
-            user_id: user.uid
+            user_id: user.uid,
           });
         }
       } catch (error) {
@@ -72,7 +75,7 @@ export default function SubscriptionCard() {
         // Set default free tier data if the API fails
         setSubscriptionData({
           ...DEFAULT_FREE_TIER,
-          user_id: user.uid
+          user_id: user.uid,
         });
       } finally {
         setLoading(false);
@@ -84,7 +87,7 @@ export default function SubscriptionCard() {
 
   const handleUpgradeClick = async () => {
     if (!user) return;
-    
+
     setUpgrading(true);
     try {
       // In a real application, this would redirect to a payment processor
@@ -114,24 +117,43 @@ export default function SubscriptionCard() {
 
   if (loading) {
     return (
-      <Card className="w-full">
+      <Card className="w-full border-2">
         <CardHeader>
-          <CardTitle>Subscription</CardTitle>
-          <CardDescription>Loading subscription information...</CardDescription>
+          <Skeleton className="h-7 w-40" />
+          <Skeleton className="h-4 w-64" />
         </CardHeader>
+        <CardContent className="space-y-6">
+          <Skeleton className="h-4 w-32" />
+          <div className="space-y-4">
+            <div className="flex justify-between">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+            <div className="flex justify-between">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Skeleton className="h-10 w-full" />
+        </CardFooter>
       </Card>
     );
   }
 
   if (!subscriptionData) {
     return (
-      <Card className="w-full">
+      <Card className="w-full border-2">
         <CardHeader>
           <CardTitle>Subscription</CardTitle>
           <CardDescription>Unable to load subscription information</CardDescription>
         </CardHeader>
         <CardFooter>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
+          <Button onClick={() => window.location.reload()} className="gap-2 rounded-full">
+            <RotateCcw className="h-4 w-4" />
+            Retry
+          </Button>
         </CardFooter>
       </Card>
     );
@@ -140,11 +162,20 @@ export default function SubscriptionCard() {
   const isPro = subscriptionData.subscription.tier === 'pro';
 
   return (
-    <Card className="w-full">
+    <Card
+      className={`w-full overflow-hidden border-2 ${isPro ? 'border-primary/50' : 'border-border'}`}
+    >
+      <div
+        className={`absolute -right-20 -top-20 h-40 w-40 rounded-full ${isPro ? 'bg-primary/20' : 'bg-secondary/10'} blur-3xl`}
+      ></div>
       <CardHeader className={isPro ? 'bg-primary/10' : ''}>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center">
-            {isPro && <Crown className="mr-2 h-5 w-5 text-primary" />}
+            {isPro ? (
+              <Crown className="mr-2 h-5 w-5 text-primary" />
+            ) : (
+              <Sparkles className="mr-2 h-5 w-5 text-secondary" />
+            )}
             {isPro ? 'Pro Subscription' : 'Free Tier'}
           </CardTitle>
           {isPro && (
@@ -160,11 +191,14 @@ export default function SubscriptionCard() {
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
-        <h3 className="mb-2 text-sm font-medium">Your current limits:</h3>
-        <div className="space-y-4">
-          <div className="flex justify-between">
+        <h3 className="mb-4 text-sm font-medium">Your current limits:</h3>
+        <div className="space-y-5">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center">
-              <span>Max file size</span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                <FileUp className="h-4 w-4 text-primary" />
+              </div>
+              <span className="ml-2 text-sm">Max file size</span>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -178,9 +212,12 @@ export default function SubscriptionCard() {
             </div>
             <span className="font-medium">{subscriptionData.limits.file_size_display}</span>
           </div>
-          <div className="flex justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center">
-              <span>Max duration</span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                <Clock className="h-4 w-4 text-primary" />
+              </div>
+              <span className="ml-2 text-sm">Max duration</span>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -197,19 +234,28 @@ export default function SubscriptionCard() {
         </div>
       </CardContent>
       <Separator />
-      <CardFooter className="flex justify-between pt-5">
+      <CardFooter className="flex justify-center pt-5">
         {!isPro ? (
-          <Button 
-            className="w-full" 
+          <Button
+            className="button-glow w-full gap-2 rounded-full"
             onClick={handleUpgradeClick}
             disabled={upgrading}
           >
+            {upgrading ? (
+              <RotateCcw className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Zap className="h-4 w-4" />
+            )}
             {upgrading ? 'Processing...' : 'Upgrade to Pro'}
           </Button>
         ) : (
-          <p className="text-center text-sm text-muted-foreground">
-            Thank you for being a Pro subscriber!
-          </p>
+          <div className="text-center">
+            <div className="mb-2 flex items-center justify-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <p className="text-sm font-medium text-primary">Pro Features Active</p>
+            </div>
+            <p className="text-xs text-muted-foreground">Thank you for being a Pro subscriber!</p>
+          </div>
         )}
       </CardFooter>
     </Card>

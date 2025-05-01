@@ -1,11 +1,27 @@
 'use client'
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileAudio, FileVideo, AlertCircle, CheckCircle2 } from 'lucide-react';
+import {
+  Upload,
+  FileAudio,
+  FileVideo,
+  AlertCircle,
+  CheckCircle2,
+  UploadCloud,
+  RotateCcw,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 
 export function FileUploadDropzoneComponent() {
   const { user } = useAuth();
@@ -34,6 +50,22 @@ export function FileUploadDropzoneComponent() {
     multiple: false,
   });
 
+  // Simulated progress updates
+  const simulateProgress = () => {
+    setUploadProgress(0);
+    const interval = setInterval(() => {
+      setUploadProgress((prevProgress) => {
+        const newProgress = prevProgress + Math.random() * 10;
+        if (newProgress >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        return newProgress;
+      });
+    }, 300);
+    return interval;
+  };
+
   const handleUpload = async () => {
     if (!file || !user) return;
 
@@ -41,6 +73,9 @@ export function FileUploadDropzoneComponent() {
     setUploadProgress(0);
     setUploadError(null);
     setUploadSuccess(false);
+
+    // Start progress simulation
+    const progressInterval = simulateProgress();
 
     // Use FormData to handle the file upload
     const formData = new FormData();
@@ -56,11 +91,16 @@ export function FileUploadDropzoneComponent() {
         },
       );
 
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
       if (response.ok) {
         const result = await response.json();
         setUploadSuccess(true);
-        router.push(`/dashboard/transcribe/${result.id}`);
-        console.log('File uploaded successfully:', result.file_url);
+        // Add a small delay before redirecting for better UX
+        setTimeout(() => {
+          router.push(`/dashboard/transcribe/${result.id}`);
+        }, 1000);
       } else {
         const errorResult = await response.json();
         setUploadError(
@@ -70,6 +110,7 @@ export function FileUploadDropzoneComponent() {
         );
       }
     } catch (error) {
+      clearInterval(progressInterval);
       console.error('Error uploading file:', error);
       setUploadError('An error occurred during upload');
     } finally {
@@ -77,64 +118,106 @@ export function FileUploadDropzoneComponent() {
     }
   };
 
+  const getIconForFile = (file: File) => {
+    if (file.type.startsWith('audio/')) {
+      return <FileAudio className="h-5 w-5 text-primary" />;
+    } else {
+      return <FileVideo className="h-5 w-5 text-primary" />;
+    }
+  };
+
   return (
-    <div className="mt-10 h-full w-full rounded-lg bg-background p-6">
-      <div
-        {...getRootProps()}
-        className={`h-full w-full cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
-          isDragActive ? 'border-primary bg-primary/10' : 'border-primary hover:border-primary'
-        }`}
-      >
-        <input {...getInputProps()} />
-        <div className="flex flex-col items-center">
-          <Upload className="mb-4 h-12 w-12 text-primary" />
-          {isDragActive ? (
-            <p className="text-lg">Drop the audio or video file here</p>
-          ) : (
-            <p className="text-lg">
-              Drag &apos;n&apos; drop an audio or video file here, or click to select
-            </p>
-          )}
-          <p className="mt-2 text-sm text-primary">
-            Max file size: 500 MB, Max duration: 2 minutes
-          </p>
-        </div>
-      </div>
-      {file && (
-        <div className="mt-4">
-          <div className="flex items-center space-x-2 text-sm text-primary">
-            {file.type.startsWith('audio/') ? (
-              <FileAudio className="h-4 w-4" />
+    <Card className="overflow-hidden border-2">
+      <CardHeader>
+        <CardTitle>Upload Media File</CardTitle>
+        <CardDescription>Drag and drop your audio or video file to transcribe</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div
+          {...getRootProps()}
+          className={`relative cursor-pointer overflow-hidden rounded-xl border-2 border-dashed p-8 text-center transition-all ${
+            isDragActive
+              ? 'border-primary bg-primary/5'
+              : 'border-border hover:border-primary/50 hover:bg-primary/5'
+          }`}
+        >
+          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/5 blur-3xl"></div>
+          <input {...getInputProps()} />
+          <div className="flex flex-col items-center">
+            <div className="mb-4 rounded-full bg-primary/10 p-3">
+              <UploadCloud className="h-8 w-8 text-primary" />
+            </div>
+            {isDragActive ? (
+              <p className="text-lg font-medium">Drop the file here</p>
             ) : (
-              <FileVideo className="h-4 w-4" />
+              <p className="text-lg font-medium">Drag &amp; drop or click to select</p>
             )}
-            <span>{file.name}</span>
-            <span>({(file.size / (1024 * 1024)).toFixed(2)} MB)</span>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Supports audio and video files up to 500MB
+            </p>
           </div>
-          <Button onClick={handleUpload} disabled={uploading} className="mt-4 w-full">
-            {uploading ? 'Uploading...' : 'Upload'}
-            <Upload className="ml-2 h-4 w-4" />
-          </Button>
         </div>
-      )}
-      {uploading && (
-        <div className="mt-4">
-          <Progress value={uploadProgress} className="w-full" />
-          <p className="mt-2 text-sm text-primary">{uploadProgress}% uploaded</p>
-        </div>
-      )}
-      {uploadError && (
-        <div className="mt-4 flex items-center rounded bg-red-100 p-2 text-red-700 dark:bg-red-700 dark:text-red-100">
-          <AlertCircle className="mr-2 h-4 w-4" />
-          {uploadError}
-        </div>
-      )}
-      {uploadSuccess && (
-        <div className="mt-4 flex items-center rounded bg-green-100 p-2 text-green-700 dark:bg-green-700 dark:text-green-100">
-          <CheckCircle2 className="mr-2 h-4 w-4" />
-          File uploaded successfully!
-        </div>
-      )}
-    </div>
+
+        {file && (
+          <div className="mt-6 space-y-4">
+            <div className="rounded-lg border bg-card/50 p-3">
+              <div className="flex items-center gap-3">
+                <div className="rounded-full bg-primary/10 p-2">{getIconForFile(file)}</div>
+                <div className="flex-grow overflow-hidden">
+                  <p className="truncate font-medium">{file.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {(file.size / (1024 * 1024)).toFixed(2)} MB · {file.type}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {!uploadSuccess && (
+              <Button
+                onClick={handleUpload}
+                disabled={uploading}
+                className="button-glow w-full rounded-full"
+              >
+                {uploading ? (
+                  <>
+                    <RotateCcw className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Upload and Transcribe
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {uploading && (
+          <div className="mt-4 space-y-1">
+            <div className="flex justify-between text-xs">
+              <span>Uploading...</span>
+              <span>{Math.round(uploadProgress)}%</span>
+            </div>
+            <Progress value={uploadProgress} className="h-2 w-full" />
+          </div>
+        )}
+
+        {uploadError && (
+          <div className="mt-4 flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4" />
+            <p>{uploadError}</p>
+          </div>
+        )}
+
+        {uploadSuccess && (
+          <div className="mt-4 flex items-center gap-2 rounded-lg bg-green-100 p-3 text-sm text-green-700 dark:bg-green-700/20 dark:text-green-300">
+            <CheckCircle2 className="h-4 w-4" />
+            <p>File uploaded successfully! Redirecting to transcription...</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

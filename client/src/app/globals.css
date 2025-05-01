@@ -10,82 +10,104 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+  
+  .glass-effect {
+    @apply bg-opacity-15 backdrop-blur-lg border border-white/10 shadow-lg;
+  }
+  
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 shadow-md;
+  }
+  
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary;
+  }
+  
+  .gradient-bg {
+    @apply bg-gradient-to-br from-primary/5 to-secondary/5;
+  }
+  
+  .gradient-border {
+    @apply border border-transparent bg-gradient-to-r from-primary/40 to-secondary/40 bg-clip-border;
+  }
+  
+  .shimmer {
+    @apply relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-white/10 before:to-transparent;
+  }
 }
-
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 230 25% 98%;
+    --foreground: 220 30% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 220 30% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
+    --popover-foreground: 220 30% 12%;
+    --primary: 224 76% 52%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
+    --secondary: 262 83% 65%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 220 15% 96%;
+    --muted-foreground: 220 30% 40%;
+    --accent: 190 90% 50%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --sidebar-background: var(--card);
-    --sidebar-foreground: var(--card-foreground);
-    --sidebar-primary: var(--primary);
-    --sidebar-primary-foreground: var(--primary-foreground);
-    --sidebar-accent: var(--accent);
-    --sidebar-accent-foreground: var(--accent-foreground);
-    --sidebar-border: var(--border);
-    --sidebar-ring: var(--ring);
+    --border: 220 20% 92%;
+    --input: 220 20% 92%;
+    --ring: 224 76% 52%;
+    --radius: 0.75rem;
+    --chart-1: 224 76% 52%;
+    --chart-2: 262 83% 65%;
+    --chart-3: 190 90% 50%;
+    --chart-4: 330 90% 65%;
+    --chart-5: 25 95% 65%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 30% 12%;
+    --sidebar-primary: 224 76% 52%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 262 83% 65%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 220 20% 92%;
+    --sidebar-ring: 224 76% 52%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 220 30% 10%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 220 25% 13%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 220 25% 13%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
+    --primary: 224 76% 60%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 262 83% 65%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
+    --muted: 220 25% 18%;
+    --muted-foreground: 220 20% 70%;
+    --accent: 190 90% 60%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 70% 50%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: var(--card);
-    --sidebar-foreground: var(--card-foreground);
-    --sidebar-primary: var(--primary);
-    --sidebar-primary-foreground: var(--primary-foreground);
-    --sidebar-accent: var(--accent);
-    --sidebar-accent-foreground: var(--accent-foreground);
-    --sidebar-border: var(--border);
-    --sidebar-ring: var(--ring);
+    --border: 220 25% 20%;
+    --input: 220 25% 20%;
+    --ring: 224 76% 60%;
+    --chart-1: 224 76% 60%;
+    --chart-2: 262 83% 65%;
+    --chart-3: 190 90% 60%;
+    --chart-4: 330 90% 70%;
+    --chart-5: 25 95% 70%;
+    --sidebar-background: 220 25% 13%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 224 76% 60%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 262 83% 65%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 220 25% 20%;
+    --sidebar-ring: 224 76% 60%;
   }
 }
-
 
 @layer base {
   * {
@@ -93,5 +115,57 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 hover:border-primary/50;
+  }
+  
+  .button-glow {
+    @apply relative overflow-hidden;
+  }
+  
+  .button-glow::after {
+    @apply absolute inset-0 rounded-[calc(var(--radius)-2px)] opacity-0 transition-opacity duration-500 content-[''] bg-gradient-to-r from-primary/30 to-secondary/30 blur-md;
+  }
+  
+  .button-glow:hover::after {
+    @apply opacity-100;
+  }
+  
+  .stat-card {
+    @apply rounded-xl border border-border/50 bg-gradient-to-br from-card to-card/80 p-5 shadow-md;
+  }
+  
+  .file-card {
+    @apply relative overflow-hidden rounded-xl border-2 border-border/40 bg-card shadow-sm transition-all duration-300;
+  }
+  
+  .file-card:hover {
+    @apply border-primary/30 shadow-lg shadow-primary/10;
+  }
+  
+  .file-card::before {
+    @apply absolute inset-0 bg-gradient-to-tr from-primary/5 to-secondary/5 opacity-0 transition-opacity duration-300 content-[''];
+  }
+  
+  .file-card:hover::before {
+    @apply opacity-100;
+  }
+  
+  .file-icon {
+    @apply rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 p-2 text-primary;
+  }
+  
+  .tab-active {
+    @apply relative overflow-hidden before:absolute before:bottom-0 before:left-0 before:h-0.5 before:w-full before:bg-gradient-to-r before:from-primary before:to-secondary;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
   }
 }
