@@ -15,10 +15,12 @@ function Page() {
   }, [user, router]);
 
   return (
-    <>
+    <div className="flex min-h-screen flex-col bg-background">
       <Navbar />
-      <AuthPage />
-    </>
+      <main className="flex flex-grow items-center justify-center">
+        <AuthPage />
+      </main>
+    </div>
   );
 }
 
