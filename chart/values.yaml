@@ -1,0 +1,55 @@
+# ============================================
+# scribe Configuration
+# ============================================
+
+app:
+  name: scribe
+
+  image:
+    registry: registry.rsft.co
+    repository: scribe
+    tag: latest
+    pullPolicy: Always
+
+  port: 8000
+  replicas: 1
+
+  healthCheck:
+    enabled: true
+    path: /
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  secretRef: scribe-secrets
+
+# ============================================
+# Ingress
+# ============================================
+ingress:
+  enabled: true
+  host: scribe-api.geethg.com
+
+# ============================================
+# Environment Variables
+# ============================================
+env:
+  S3_BUCKET_NAME: scribe-app-prod
+  AWS_REGION: us-east-1
+  FIREBASE_TYPE: service_account
+  FIREBASE_PROJECT_ID: scribe-app-prod
+  FIREBASE_CLIENT_ID: "106009545908009854506"
+  FIREBASE_AUTH_URI: https://accounts.google.com/o/oauth2/auth
+  FIREBASE_TOKEN_URI: https://oauth2.googleapis.com/token
+  FIREBASE_AUTH_PROVIDER_CERT_URL: https://www.googleapis.com/oauth2/v1/certs
+  FIREBASE_CLIENT_CERT_URL: https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-c4zi6%40scribe-app-prod.iam.gserviceaccount.com
+
+persistence:
+  enabled: false
