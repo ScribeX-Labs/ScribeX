@@ -36,6 +36,10 @@ app:
 ingress:
   enabled: true
   host: scribe-api.geethg.com
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 500m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
 
 # ============================================
 # Environment Variables
