@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { AudioLines, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -62,25 +63,30 @@ export function TranscriptChat({
               </div>
             </div>
           ) : (
-            messages.map((message, i) => (
-              <div
-                key={i}
-                className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
-              >
-                <div
-                  className={cn(
-                    'max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed',
-                    message.role === 'user'
-                      ? 'rounded-br-sm bg-primary text-primary-foreground'
-                      : 'rounded-bl-sm bg-muted',
-                  )}
+            <AnimatePresence initial={false}>
+              {messages.map((message, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                  className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}
                 >
-                  {message.content === '…' ? <TypingDots /> : (
-                    <p className="whitespace-pre-wrap">{message.content}</p>
-                  )}
-                </div>
-              </div>
-            ))
+                  <div
+                    className={cn(
+                      'max-w-[85%] rounded-xl px-3.5 py-2.5 text-sm leading-relaxed',
+                      message.role === 'user'
+                        ? 'rounded-br-sm bg-primary text-primary-foreground'
+                        : 'rounded-bl-sm bg-muted',
+                    )}
+                  >
+                    {message.content === '…' ? <TypingDots /> : (
+                      <p className="whitespace-pre-wrap">{message.content}</p>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           )}
         </div>
       </CardContent>

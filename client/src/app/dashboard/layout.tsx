@@ -17,6 +17,7 @@ import {
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScribeLogo } from '@/components/scribe-logo';
+import { CommandMenu } from '@/components/command-menu';
 import { useAuth } from '@/context/auth-context';
 import { cn } from '@/lib/utils';
 
@@ -120,6 +121,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <div className="mt-8">{renderNavLinks(() => setNavOpen(false))}</div>
             </SheetContent>
           </Sheet>
+
+          <div className="flex items-center gap-3 md:mr-auto md:ml-0">
+            <CommandMenu />
+          </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger
