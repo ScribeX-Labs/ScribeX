@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { motion } from 'motion/react';
 import { Clock, HardDrive, Loader2, Sparkles } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -80,8 +82,11 @@ export function SubscriptionCard() {
   const isPro = info.subscription.tier === 'pro';
 
   return (
-    <Card className={isPro ? 'border-primary/40' : ''}>
-      <CardHeader>
+    <Card className={cn('grain relative overflow-hidden', isPro && 'border-primary/40')}>
+      {isPro && (
+        <div className="absolute inset-x-0 top-0 -z-0 h-24 bg-[radial-gradient(ellipse_60%_100%_at_50%_0%,oklch(0.795_0.155_75/0.18),transparent)]" />
+      )}
+      <CardHeader className="relative">
         <div className="flex items-center justify-between">
           <CardTitle className="font-display">Subscription</CardTitle>
           <Badge variant={isPro ? 'default' : 'secondary'} className="rounded-full uppercase">
@@ -94,31 +99,46 @@ export function SubscriptionCard() {
             : 'You’re on the free plan. Pro unlocks longer recordings.'}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="relative space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-lg border bg-muted/40 p-3">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <HardDrive className="h-4 w-4" />
-              <span className="text-xs">Max file size</span>
-            </div>
-            <p className="mt-1 font-mono text-lg font-bold">{info.limits.display.file_size}</p>
-          </div>
-          <div className="rounded-lg border bg-muted/40 p-3">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Clock className="h-4 w-4" />
-              <span className="text-xs">Max duration</span>
-            </div>
-            <p className="mt-1 font-mono text-lg font-bold">{info.limits.display.duration}</p>
-          </div>
+          <LimitTile icon={HardDrive} label="Max file size" value={info.limits.display.file_size} />
+          <LimitTile icon={Clock} label="Max duration" value={info.limits.display.duration} />
         </div>
 
         {!isPro && (
-          <Button className="press w-full" onClick={handleUpgrade} disabled={upgrading}>
-            {upgrading ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            Upgrade to Pro
-          </Button>
+          <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+            <Button className="press w-full" onClick={handleUpgrade} disabled={upgrading}>
+              {upgrading ? <Loader2 className="animate-spin" /> : <Sparkles />}
+              Upgrade to Pro
+            </Button>
+          </motion.div>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function LimitTile({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+      className="rounded-xl border bg-muted/40 p-3"
+    >
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Icon className="h-4 w-4" />
+        <span className="text-xs">{label}</span>
+      </div>
+      <p className="mt-1 font-mono text-lg font-bold">{value}</p>
+    </motion.div>
   );
 }

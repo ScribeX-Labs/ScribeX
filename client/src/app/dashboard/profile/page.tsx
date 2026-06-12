@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SubscriptionCard } from '@/components/subscription-card';
+import { Stagger, StaggerItem } from '@/components/motion';
 import { useAuth } from '@/context/auth-context';
 import { getFirebaseDb } from '@/lib/firebase';
 
@@ -58,8 +59,8 @@ export default function ProfilePage() {
         <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Profile</h1>
       </div>
 
-      <div className="grid items-start gap-6 lg:grid-cols-2">
-        <Card>
+      <Stagger className="grid items-start gap-6 lg:grid-cols-2" stagger={0.1}>
+        <StaggerItem><Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="font-display">Your details</CardTitle>
@@ -144,10 +145,10 @@ export default function ProfilePage() {
               </>
             )}
           </CardContent>
-        </Card>
+        </Card></StaggerItem>
 
-        <SubscriptionCard />
-      </div>
+        <StaggerItem><SubscriptionCard /></StaggerItem>
+      </Stagger>
     </div>
   );
 }

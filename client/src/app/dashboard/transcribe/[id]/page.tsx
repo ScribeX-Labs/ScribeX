@@ -2,10 +2,11 @@
 
 import { use, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Download, FileAudio, Loader2, Star, XCircle } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { ArrowLeft, Download, FileAudio, Sparkles, Star, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -17,9 +18,11 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StarRating } from '@/components/star-rating';
 import { TranscriptChat, type ChatMessage } from '@/components/transcript-chat';
+import { EASE_OUT } from '@/components/motion';
 import { useAuth } from '@/context/auth-context';
 import { useUserUploadData, type FileData } from '@/context/user-upload-data-context';
 import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 type Status = 'loading' | 'processing' | 'ready' | 'failed';
 
@@ -228,9 +231,12 @@ export default function TranscribePage({ params }: { params: Promise<{ id: strin
           >
             <ArrowLeft />
           </Button>
-          <h1 className="truncate font-display text-xl font-bold tracking-tight md:text-2xl">
-            {fileData?.original_filename}
-          </h1>
+          <div className="min-w-0">
+            <h1 className="truncate font-display text-xl font-bold tracking-tight md:text-2xl">
+              {fileData?.original_filename}
+            </h1>
+            <StatusPill status={status} />
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -261,10 +267,15 @@ export default function TranscribePage({ params }: { params: Promise<{ id: strin
             {fileType === 'video' ? (
               <video src={fileData?.file_url} controls className="aspect-video w-full bg-black" />
             ) : (
-              <div className="flex flex-col items-center gap-4 px-6 py-10">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/15">
+              <div className="relative flex flex-col items-center gap-5 px-6 py-10">
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+                <motion.div
+                  className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/15"
+                  animate={{ scale: [1, 1.04, 1] }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                >
                   <FileAudio className="h-8 w-8 text-primary" />
-                </div>
+                </motion.div>
                 <audio src={fileData?.file_url} controls className="w-full max-w-md" />
               </div>
             )}
@@ -272,53 +283,87 @@ export default function TranscribePage({ params }: { params: Promise<{ id: strin
 
           {/* transcript */}
           <Card>
-            <CardHeader>
-              <CardTitle className="font-display">Transcript</CardTitle>
-              <CardDescription>
-                {status === 'processing' && 'Transcribing your media…'}
-                {status === 'ready' && 'Ready — searchable, exportable, askable.'}
-                {status === 'failed' && 'Transcription failed'}
-              </CardDescription>
-            </CardHeader>
             <CardContent>
-              {status === 'processing' && (
-                <div className="space-y-5 py-4">
-                  <div className="flex flex-col items-center text-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="mt-3 font-medium">Working on it</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Longer recordings take a few minutes. You can leave and come back.
-                    </p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between font-mono text-xs text-muted-foreground">
-                      <span>Processing</span>
-                      <span>{Math.round(progress)}%</span>
+              <AnimatePresence mode="wait">
+                {status === 'processing' && (
+                  <motion.div
+                    key="processing"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="space-y-5 py-6"
+                  >
+                    <div className="flex flex-col items-center text-center">
+                      <div className="flex h-12 items-end gap-1">
+                        {Array.from({ length: 12 }).map((_, i) => (
+                          <motion.span
+                            key={i}
+                            className="w-1 rounded-full bg-primary"
+                            animate={{ scaleY: [0.3, 1, 0.4, 0.8, 0.3] }}
+                            transition={{
+                              duration: 1 + (i % 3) * 0.2,
+                              repeat: Infinity,
+                              ease: 'easeInOut',
+                              delay: i * 0.06,
+                            }}
+                            style={{ height: 40, transformOrigin: 'bottom' }}
+                          />
+                        ))}
+                      </div>
+                      <p className="mt-4 font-display font-medium">Transcribing your recording</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Longer recordings take a few minutes. You can leave and come back.
+                      </p>
                     </div>
-                    <Progress value={progress} className="h-1.5" />
-                  </div>
-                </div>
-              )}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between font-mono text-xs text-muted-foreground">
+                        <span>Processing</span>
+                        <span>{Math.round(progress)}%</span>
+                      </div>
+                      <Progress value={progress} className="h-1.5" />
+                    </div>
+                  </motion.div>
+                )}
 
-              {status === 'failed' && (
-                <div className="flex flex-col items-center py-6 text-center">
-                  <XCircle className="h-10 w-10 text-destructive" />
-                  <p className="mt-3 font-medium">We couldn’t transcribe this one</p>
-                  <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                    {failureReason ??
-                      'Something went wrong with this file. Try uploading it again, or use a different format.'}
-                  </p>
-                  <Button className="press mt-5" nativeButton={false} render={<Link href="/dashboard/upload" />}>
-                    Try another file
-                  </Button>
-                </div>
-              )}
+                {status === 'failed' && (
+                  <motion.div
+                    key="failed"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex flex-col items-center py-8 text-center"
+                  >
+                    <XCircle className="h-10 w-10 text-destructive" />
+                    <p className="mt-3 font-display font-medium">We couldn’t transcribe this one</p>
+                    <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                      {failureReason ??
+                        'Something went wrong with this file. Try uploading it again, or use a different format.'}
+                    </p>
+                    <Button className="press mt-5" nativeButton={false} render={<Link href="/dashboard/upload" />}>
+                      Try another file
+                    </Button>
+                  </motion.div>
+                )}
 
-              {status === 'ready' && (
-                <div className="max-h-[420px] overflow-y-auto rounded-lg border bg-muted/30 p-4">
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{transcript}</p>
-                </div>
-              )}
+                {status === 'ready' && (
+                  <motion.div
+                    key="ready"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, ease: EASE_OUT }}
+                  >
+                    <div className="mb-3 flex items-center justify-between">
+                      <h2 className="font-display font-semibold">Transcript</h2>
+                      <span className="flex items-center gap-1 rounded-full bg-primary/15 px-2.5 py-1 text-xs font-medium text-primary">
+                        <Sparkles className="h-3 w-3" /> Ready
+                      </span>
+                    </div>
+                    <div className="max-h-[420px] overflow-y-auto rounded-lg border bg-muted/30 p-4">
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{transcript}</p>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </CardContent>
           </Card>
         </div>
@@ -345,5 +390,21 @@ export default function TranscribePage({ params }: { params: Promise<{ id: strin
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function StatusPill({ status }: { status: Status }) {
+  const map = {
+    loading: { label: 'Loading', cls: 'text-muted-foreground', dot: 'bg-muted-foreground' },
+    processing: { label: 'Transcribing', cls: 'text-primary', dot: 'bg-primary' },
+    ready: { label: 'Ready', cls: 'text-success', dot: 'bg-success' },
+    failed: { label: 'Failed', cls: 'text-destructive', dot: 'bg-destructive' },
+  } as const;
+  const s = map[status];
+  return (
+    <span className={cn('mt-0.5 flex items-center gap-1.5 font-mono text-xs', s.cls)}>
+      <span className={cn('h-1.5 w-1.5 rounded-full', s.dot, status === 'processing' && 'animate-pulse')} />
+      {s.label}
+    </span>
   );
 }
