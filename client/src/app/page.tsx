@@ -1,122 +1,160 @@
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import {
-  FileAudio,
-  FileVideo,
-  Brain,
-  Share2,
-  Check,
-  Crown,
   ArrowRight,
-  Zap,
+  AudioLines,
+  Check,
+  FileText,
+  MessageCircleQuestion,
+  ShieldCheck,
   Sparkles,
+  UploadCloud,
 } from 'lucide-react';
-import Navbar from '@/components/navbar';
-import ScribeLogo from '@/components/ScribeLogo';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { ScribeLogo } from '@/components/scribe-logo';
+import { Waveform } from '@/components/waveform';
 
-export default function Home() {
+const STEPS = [
+  {
+    icon: UploadCloud,
+    title: 'Drop your media',
+    body: 'Audio or video — lectures, interviews, meetings. Drag it in and we take it from there.',
+  },
+  {
+    icon: AudioLines,
+    title: 'We transcribe it',
+    body: 'Speech becomes accurate, readable text in minutes, not hours.',
+  },
+  {
+    icon: MessageCircleQuestion,
+    title: 'Ask it anything',
+    body: 'Chat with an AI that has read every word. Summaries, answers, study notes.',
+  },
+];
+
+const FEATURES = [
+  {
+    icon: FileText,
+    title: 'Export-ready transcripts',
+    body: 'Clean plain-text exports you can paste into notes, papers, or docs.',
+  },
+  {
+    icon: Sparkles,
+    title: 'AI that knows your content',
+    body: 'Powered by Claude. Ask follow-ups and get answers grounded in your transcript.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Private by default',
+    body: 'Your files live in your account. Nobody else sees them — not even on free.',
+  },
+];
+
+const TIERS = [
+  {
+    name: 'Free',
+    price: '$0',
+    tagline: 'For trying it out',
+    features: ['Files up to 500 MB', 'Media up to 2 minutes', 'AI chat on every transcript'],
+    cta: 'Start free',
+    highlighted: false,
+  },
+  {
+    name: 'Pro',
+    price: '$8',
+    tagline: 'For serious note-takers',
+    features: [
+      'Files up to 5 GB',
+      'Media up to 4 hours',
+      'AI chat on every transcript',
+      'Priority transcription queue',
+    ],
+    cta: 'Go Pro',
+    highlighted: true,
+  },
+];
+
+export default function LandingPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
-      <Navbar />
-      <main className="flex-grow">
-        {/* Hero Section */}
-        <section className="relative overflow-hidden py-32">
-          <div className="absolute -left-40 -top-40 -z-10 h-[600px] w-[600px] rounded-full bg-primary/15 blur-[100px]"></div>
-          <div className="absolute -bottom-40 -right-40 -z-10 h-[600px] w-[600px] rounded-full bg-secondary/15 blur-[100px]"></div>
+    <div className="flex min-h-dvh flex-col">
+      <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-md">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4">
+          <ScribeLogo />
+          <nav className="flex items-center gap-2">
+            <Button variant="ghost" nativeButton={false} render={<Link href="/login" />}>
+              Sign in
+            </Button>
+            <Button className="press" nativeButton={false} render={<Link href="/login" />}>
+              Get started
+              <ArrowRight />
+            </Button>
+          </nav>
+        </div>
+      </header>
 
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-3xl text-center">
-              <div className="mb-6 inline-flex items-center rounded-full border border-border/40 bg-muted/30 px-4 py-1.5 text-sm backdrop-blur-sm">
-                <span className="mr-2 rounded-full bg-primary/20 px-2 py-0.5 text-xs font-medium text-primary">
-                  NEW
-                </span>
-                Now with enhanced AI analysis capabilities
-              </div>
+      <main className="flex-1">
+        {/* hero */}
+        <section className="grain relative overflow-hidden">
+          <div className="absolute inset-x-0 top-0 -z-10 h-full bg-[radial-gradient(ellipse_55%_55%_at_50%_-10%,oklch(0.795_0.155_75/0.14),transparent)]" />
+          <div className="mx-auto flex w-full max-w-6xl flex-col items-center px-4 pb-20 pt-24 text-center md:pb-28 md:pt-32">
+            <Badge variant="outline" className="rise gap-2 rounded-full border-primary/30 px-3 py-1">
+              <span className="rec-dot" />
+              <span className="font-mono text-xs tracking-wide text-muted-foreground">
+                REC · transcription in progress
+              </span>
+            </Badge>
 
-              <h1 className="mb-6 text-4xl font-bold leading-tight tracking-tight md:text-5xl lg:text-6xl">
-                <span className="gradient-text">Transcribe, Understand, </span>
-                <span className="relative">
-                  Share
-                  <span className="absolute -bottom-1 left-0 h-1 w-full bg-gradient-to-r from-primary to-secondary"></span>
-                </span>
-              </h1>
-              <p className="mb-10 text-lg text-muted-foreground md:text-xl">
-                Scribe helps you accurately transcribe audio and video files with advanced AI
-                features. Transform your media into actionable insights in minutes, not hours.
-              </p>
-              <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <Button
-                  asChild
-                  size="lg"
-                  className="button-glow rounded-full bg-gradient-to-r from-primary to-secondary px-8 hover:shadow-lg hover:shadow-primary/20"
-                >
-                  <Link href="/login">Get Started</Link>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="lg"
-                  className="rounded-full px-8 hover:bg-primary/5"
-                >
-                  <Link href="#features">
-                    Learn More <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
+            <h1
+              className="rise mt-6 max-w-3xl font-display text-5xl font-bold leading-[1.05] tracking-tight md:text-7xl"
+              style={{ animationDelay: '80ms' }}
+            >
+              Every word, captured.
+              <br />
+              <span className="text-primary">Every answer, instant.</span>
+            </h1>
+
+            <p
+              className="rise mt-6 max-w-xl text-balance text-lg text-muted-foreground"
+              style={{ animationDelay: '160ms' }}
+            >
+              ScribeX turns your lectures, meetings, and interviews into accurate transcripts —
+              then lets you interrogate them with AI.
+            </p>
+
+            <div className="rise mt-8 flex items-center gap-3" style={{ animationDelay: '240ms' }}>
+              <Button size="lg" className="press" nativeButton={false} render={<Link href="/login" />}>
+                Start transcribing
+                <ArrowRight />
+              </Button>
+              <Button size="lg" variant="outline" className="press" nativeButton={false} render={<Link href="#pricing" />}>
+                See pricing
+              </Button>
             </div>
+
+            <Waveform className="rise mt-16 h-20 w-full max-w-2xl justify-center" />
           </div>
         </section>
 
-        {/* Features Section */}
-        <section id="features" className="gradient-bg relative py-24">
-          <div className="absolute inset-0 -z-10 bg-[url('/noise.png')] bg-repeat opacity-30"></div>
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="mb-16 text-center">
-              <h2 className="gradient-text mb-3 text-3xl font-bold md:text-4xl">
-                Powerful Features
-              </h2>
-              <p className="mx-auto max-w-2xl text-muted-foreground">
-                Everything you need to transform your audio and video content into accessible,
-                searchable text.
-              </p>
-            </div>
-
-            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-              {[
-                {
-                  icon: FileAudio,
-                  title: 'Audio Transcription',
-                  description: 'Transcribe audio files with 95% accuracy using advanced AI models',
-                },
-                {
-                  icon: FileVideo,
-                  title: 'Video Transcription',
-                  description: 'Convert video content into searchable, editable text automatically',
-                },
-                {
-                  icon: Brain,
-                  title: 'AI Analysis',
-                  description: 'Get insights, summaries and key points from your transcripts',
-                },
-                {
-                  icon: Share2,
-                  title: 'Easy Sharing',
-                  description: 'Share and export your transcripts in multiple formats',
-                },
-              ].map((feature, index) => (
-                <Card
-                  key={index}
-                  className="glass-card transition-all duration-300 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/10"
-                >
-                  <CardHeader className="pb-2">
-                    <div className="mb-4 inline-flex rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 p-3">
-                      <feature.icon className="h-6 w-6 text-primary" />
+        {/* how it works */}
+        <section className="border-t border-border/60">
+          <div className="mx-auto w-full max-w-6xl px-4 py-20">
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-primary">How it works</p>
+            <h2 className="mt-3 font-display text-3xl font-bold tracking-tight md:text-4xl">
+              From recording to insight in three steps
+            </h2>
+            <div className="mt-10 grid gap-4 md:grid-cols-3">
+              {STEPS.map((step, i) => (
+                <Card key={step.title} className="relative overflow-hidden">
+                  <CardContent className="space-y-3">
+                    <span className="absolute right-4 top-2 font-mono text-5xl font-bold text-primary/10">
+                      0{i + 1}
+                    </span>
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15">
+                      <step.icon className="h-5 w-5 text-primary" />
                     </div>
-                    <CardTitle>{feature.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">{feature.description}</p>
+                    <h3 className="font-display text-lg font-semibold">{step.title}</h3>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{step.body}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -124,162 +162,97 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Pricing Section */}
-        <section className="relative py-24">
-          <div className="absolute -right-40 top-20 -z-10 h-[400px] w-[400px] rounded-full bg-primary/10 blur-[100px]"></div>
-          <div className="absolute -left-40 bottom-20 -z-10 h-[400px] w-[400px] rounded-full bg-secondary/10 blur-[100px]"></div>
-
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="mb-16 text-center">
-              <h2 className="gradient-text mb-3 text-3xl font-bold md:text-4xl">
-                Choose Your Plan
-              </h2>
-              <p className="mx-auto max-w-2xl text-muted-foreground">
-                Select the perfect plan for your transcription needs. Upgrade anytime as your
-                requirements grow.
-              </p>
-            </div>
-
-            <div className="mx-auto grid max-w-4xl gap-8 md:grid-cols-2">
-              {/* Free Tier */}
-              <Card className="glass-effect border-2 transition-all duration-300 hover:shadow-lg">
-                <CardHeader>
-                  <CardTitle className="flex items-center text-2xl">
-                    <Sparkles className="mr-2 h-5 w-5 text-secondary" />
-                    Free
-                  </CardTitle>
-                  <CardDescription>For casual users</CardDescription>
-                  <div className="mt-6">
-                    <span className="text-5xl font-bold">$0</span>
-                    <span className="text-muted-foreground">/month</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-grow">
-                  <ul className="space-y-3">
-                    {[
-                      'Up to 500MB file size',
-                      'Up to 2 minutes duration',
-                      'Basic transcription features',
-                      'Limited AI analysis',
-                    ].map((feature, i) => (
-                      <li key={i} className="flex items-center">
-                        <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-secondary/10">
-                          <Check className="h-3 w-3 text-secondary" />
-                        </div>
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-                <CardFooter>
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="w-full rounded-full hover:bg-secondary/5"
-                  >
-                    <Link href="/login">Sign Up</Link>
-                  </Button>
-                </CardFooter>
-              </Card>
-
-              {/* Pro Tier */}
-              <Card className="glass-effect relative border-2 border-primary/30 shadow-lg shadow-primary/10 transition-all duration-300 hover:border-primary/50 hover:shadow-xl">
-                <div className="glass-effect absolute -right-3 -top-3 rounded-full border border-primary/20 bg-gradient-to-r from-primary/80 to-secondary/80 px-3 py-1 text-xs font-medium text-white">
-                  Most Popular
-                </div>
-                <CardHeader>
-                  <CardTitle className="flex items-center text-2xl">
-                    <Crown className="mr-2 h-5 w-5 text-primary" />
-                    Pro
-                  </CardTitle>
-                  <CardDescription>For power users</CardDescription>
-                  <div className="mt-6">
-                    <span className="text-5xl font-bold">$9.99</span>
-                    <span className="text-muted-foreground">/month</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-grow">
-                  <ul className="space-y-3">
-                    {[
-                      'Unlimited file size',
-                      'Unlimited duration',
-                      'Advanced transcription accuracy',
-                      'Full AI analysis capabilities',
-                      'Priority support',
-                    ].map((feature, i) => (
-                      <li key={i} className="flex items-center">
-                        <div className="mr-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary/15">
-                          <Zap className="h-3 w-3 text-primary" />
-                        </div>
-                        <span className="font-medium">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-                <CardFooter>
-                  <Button
-                    asChild
-                    className="button-glow w-full rounded-full bg-gradient-to-r from-primary to-secondary"
-                  >
-                    <Link href="/login">Get Pro</Link>
-                  </Button>
-                </CardFooter>
-              </Card>
+        {/* features */}
+        <section className="border-t border-border/60 bg-card/40">
+          <div className="mx-auto w-full max-w-6xl px-4 py-20">
+            <div className="grid items-start gap-10 md:grid-cols-2">
+              <div className="md:sticky md:top-24">
+                <p className="font-mono text-xs uppercase tracking-[0.2em] text-primary">
+                  Built for understanding
+                </p>
+                <h2 className="mt-3 font-display text-3xl font-bold tracking-tight md:text-4xl">
+                  Your recordings have answers. Now you can ask.
+                </h2>
+                <p className="mt-4 text-muted-foreground">
+                  Most transcription tools stop at text. ScribeX keeps going — every transcript
+                  becomes a conversation you can query, summarize, and study from.
+                </p>
+              </div>
+              <div className="space-y-4">
+                {FEATURES.map((feature) => (
+                  <Card key={feature.title}>
+                    <CardContent className="flex gap-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15">
+                        <feature.icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <h3 className="font-display font-semibold">{feature.title}</h3>
+                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                          {feature.body}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
           </div>
         </section>
 
-        {/* CTA Section */}
-        <section className="gradient-bg relative py-20">
-          <div className="absolute inset-0 -z-10 bg-[url('/noise.png')] bg-repeat opacity-30"></div>
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="glass-effect mx-auto max-w-3xl rounded-3xl p-12 text-center">
-              <h3 className="gradient-text mb-6 text-3xl font-bold">
-                Ready to streamline your transcription workflow?
-              </h3>
-              <p className="mb-8 text-muted-foreground">
-                Join thousands of professionals who save time and increase productivity with Scribe.
-              </p>
-              <Button
-                asChild
-                size="lg"
-                className="button-glow rounded-full bg-gradient-to-r from-primary to-secondary px-8 hover:shadow-lg hover:shadow-primary/20"
-              >
-                <Link href="/login">Create Your Free Account</Link>
-              </Button>
+        {/* pricing */}
+        <section id="pricing" className="border-t border-border/60">
+          <div className="mx-auto w-full max-w-6xl px-4 py-20">
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-primary">Pricing</p>
+            <h2 className="mt-3 font-display text-3xl font-bold tracking-tight md:text-4xl">
+              Start free. Upgrade when your recordings get longer.
+            </h2>
+            <div className="mt-10 grid gap-4 md:max-w-3xl md:grid-cols-2">
+              {TIERS.map((tier) => (
+                <Card
+                  key={tier.name}
+                  className={tier.highlighted ? 'border-primary/50 shadow-[0_0_40px_-12px] shadow-primary/30' : ''}
+                >
+                  <CardContent className="space-y-5">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-display text-xl font-semibold">{tier.name}</h3>
+                      {tier.highlighted && (
+                        <Badge className="rounded-full">Most popular</Badge>
+                      )}
+                    </div>
+                    <div>
+                      <span className="font-display text-4xl font-bold">{tier.price}</span>
+                      <span className="text-sm text-muted-foreground"> / month</span>
+                      <p className="mt-1 text-sm text-muted-foreground">{tier.tagline}</p>
+                    </div>
+                    <ul className="space-y-2.5">
+                      {tier.features.map((feature) => (
+                        <li key={feature} className="flex items-center gap-2 text-sm">
+                          <Check className="h-4 w-4 shrink-0 text-primary" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      className="press w-full"
+                      variant={tier.highlighted ? 'default' : 'outline'}
+                      nativeButton={false} render={<Link href="/login" />}
+                    >
+                      {tier.cta}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-border bg-card/30 py-12 backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
-            <div className="flex items-center">
-              <ScribeLogo className="h-8 w-8 text-primary" />
-              <span className="gradient-text ml-2 text-xl font-bold">Scribe</span>
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
-              <Link href="#" className="text-muted-foreground hover:text-foreground">
-                Terms
-              </Link>
-              <Link href="#" className="text-muted-foreground hover:text-foreground">
-                Privacy
-              </Link>
-              <Link href="#" className="text-muted-foreground hover:text-foreground">
-                Cookies
-              </Link>
-              <Link href="#" className="text-muted-foreground hover:text-foreground">
-                About
-              </Link>
-              <Link href="#" className="text-muted-foreground hover:text-foreground">
-                Contact
-              </Link>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} Scribe. All rights reserved.
-            </div>
-          </div>
+      <footer className="border-t border-border/60">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 md:flex-row">
+          <ScribeLogo />
+          <p className="font-mono text-xs text-muted-foreground">
+            © {new Date().getFullYear()} ScribeX. Every word, captured.
+          </p>
         </div>
       </footer>
     </div>

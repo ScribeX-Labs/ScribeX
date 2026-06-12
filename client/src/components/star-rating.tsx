@@ -1,46 +1,44 @@
-import { useState } from 'react'
-import { Star } from 'lucide-react'
+'use client';
 
-export interface StarRatingProps {
-  maxRating?: number;
-  rating?: number;
-  onChange: (rating: number) => void;
-  size?: number;
-  onRate?: (rating: number) => void; // For backward compatibility
-}
+import { useState } from 'react';
+import { Star } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function StarRating({
-  maxRating = 5,
-  rating: initialRating = 0,
+  rating,
   onChange,
-  size = 24,
-  onRate,
-}: StarRatingProps) {
-  const [rating, setRating] = useState(initialRating);
-  const [hover, setHover] = useState(0);
-
-  // Handle the rating change
-  const handleRate = (value: number) => {
-    setRating(value);
-    onChange(value);
-    if (onRate) onRate(value); // For backward compatibility
-  };
+  maxRating = 5,
+}: {
+  rating: number;
+  onChange: (rating: number) => void;
+  maxRating?: number;
+}) {
+  const [hovered, setHovered] = useState(0);
 
   return (
-    <div className="flex items-center">
-      {Array.from({ length: maxRating }, (_, i) => i + 1).map((star) => (
-        <Star
-          key={star}
-          className={`cursor-pointer transition-colors ${
-            star <= (hover || rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-          }`}
-          size={size}
-          onClick={() => handleRate(star)}
-          onMouseEnter={() => setHover(star)}
-          onMouseLeave={() => setHover(0)}
-        />
+    <div className="flex gap-1" role="radiogroup" aria-label="Rate this transcript">
+      {Array.from({ length: maxRating }, (_, i) => i + 1).map((value) => (
+        <button
+          key={value}
+          type="button"
+          role="radio"
+          aria-checked={rating === value}
+          aria-label={`${value} star${value > 1 ? 's' : ''}`}
+          className="press rounded p-1 focus-visible:outline-2 focus-visible:outline-ring"
+          onMouseEnter={() => setHovered(value)}
+          onMouseLeave={() => setHovered(0)}
+          onClick={() => onChange(value)}
+        >
+          <Star
+            className={cn(
+              'h-8 w-8 transition-colors duration-150',
+              value <= (hovered || rating)
+                ? 'fill-primary text-primary'
+                : 'text-muted-foreground/40',
+            )}
+          />
+        </button>
       ))}
     </div>
   );
 }
-
