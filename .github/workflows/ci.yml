@@ -81,15 +81,25 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set Up Node.js Environment
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
+      - name: Set Up Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Install Frontend Dependencies
         working-directory: ./client
-        run: npm install
+        run: bun install --frozen-lockfile
 
-      - name: Execute Frontend Tests
+      - name: Lint
         working-directory: ./client
-        run: npm test
+        run: bun run lint
+
+      - name: Build
+        working-directory: ./client
+        run: bun run build
+        env:
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
