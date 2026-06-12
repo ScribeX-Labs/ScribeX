@@ -1,20 +1,29 @@
-import type { Metadata } from 'next';
-import './globals.css';
-import { AuthProvider } from '@/context/AuthContext';
-import { ThemeProvider } from '@/components/theme-provider';
-import { Noto_Sans } from 'next/font/google';
-import { UserUploadDataProvider } from '@/context/UserUploadDataContext';
-import { Toaster } from '@/components/ui/toaster';
+import type { Metadata } from "next";
+import { Bricolage_Grotesque, Instrument_Sans, Spline_Sans_Mono } from "next/font/google";
+import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/context/auth-context";
+import { UserUploadDataProvider } from "@/context/user-upload-data-context";
+import "./globals.css";
 
-const noto_sans = Noto_Sans({
-  subsets: ['latin'],
-  weight: ['100', '300', '400', '700', '900'],
+const display = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+});
+
+const sans = Instrument_Sans({
+  variable: "--font-instrument",
+  subsets: ["latin"],
+});
+
+const mono = Spline_Sans_Mono({
+  variable: "--font-spline-mono",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: 'Scribe',
+  title: "ScribeX — Transcribe anything, ask everything",
   description:
-    'Scribe is a website that helps users accurately transcribe audio or video files and use up-to-date AI features to help users better understand the transcript.',
+    "Upload audio or video, get accurate transcripts, and chat with an AI that knows your content.",
 };
 
 export default function RootLayout({
@@ -23,21 +32,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${noto_sans.className} antialiased`}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthProvider>
-            <UserUploadDataProvider>
-              {children}
-              <Toaster />
-            </UserUploadDataProvider>
-          </AuthProvider>
-        </ThemeProvider>
+    <html
+      lang="en"
+      className={`dark ${display.variable} ${sans.variable} ${mono.variable} h-full antialiased`}
+    >
+      <body className="flex min-h-full flex-col">
+        <AuthProvider>
+          <UserUploadDataProvider>{children}</UserUploadDataProvider>
+        </AuthProvider>
+        <Toaster theme="dark" position="bottom-right" />
       </body>
     </html>
   );

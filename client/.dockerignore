@@ -1,4 +1,4 @@
-node_modules/
-.venv/
-.next/
-coverage/
+node_modules
+.next
+.git
+.env*

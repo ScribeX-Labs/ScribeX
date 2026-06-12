@@ -1,5 +1,7 @@
 import time
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends
+from fastapi import FastAPI, File, Header, UploadFile, HTTPException, Depends
+from firebase_admin import auth as firebase_auth
+from pydantic import BaseModel as PydanticBaseModel
 from contextlib import asynccontextmanager
 from starlette.middleware.cors import CORSMiddleware
 from firebase_admin import firestore
@@ -171,11 +173,17 @@ if __name__ == "__main__":
 
 app = FastAPI(lifespan=lifespan)
 
-# Enable CORS for all origins
+# comma-separated list, e.g. "https://scribe.geethg.com,http://localhost:3000"; "*" stays open
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGINS", "*").split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials="*" not in ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -393,18 +401,38 @@ async def update_media_url(body: dict):
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 
-# Add a new endpoint to manage user subscriptions
-@app.post("/subscriptions/{user_id}")
-async def update_subscription(user_id: str, tier: SubscriptionTier):
-    """Update a user's subscription tier (admin access only)"""
+class SubscriptionUpdate(PydanticBaseModel):
+    tier: SubscriptionTier
+
+
+def require_user(user_id: str, authorization: str | None) -> None:
+    """Verify the Firebase ID token and that it belongs to user_id."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing bearer token")
     try:
-        # In a production environment, this endpoint should be protected
-        # with proper authentication to ensure only admins can update subscriptions
-        subscription_data = await subscription.update_user_subscription(user_id, tier)
+        decoded = firebase_auth.verify_id_token(authorization.split(" ", 1)[1])
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    if decoded.get("uid") != user_id:
+        raise HTTPException(status_code=403, detail="Token does not match user")
+
+
+@app.post("/subscriptions/{user_id}")
+async def update_subscription(
+    user_id: str,
+    body: SubscriptionUpdate,
+    authorization: str | None = Header(default=None),
+):
+    """Update a user's subscription tier (requires the user's own ID token)"""
+    require_user(user_id, authorization)
+    try:
+        subscription_data = await subscription.update_user_subscription(
+            user_id, body.tier
+        )
         return {
             "user_id": user_id,
             "subscription": subscription_data,
-            "message": f"Subscription updated to {tier} successfully",
+            "message": f"Subscription updated to {body.tier.value} successfully",
         }
     except Exception as e:
         raise HTTPException(
@@ -432,6 +460,10 @@ async def get_subscription(user_id: str):
                 if is_pro
                 else f"{MAX_DURATION_SECONDS / 60:.0f} minutes"
             ),
+        }
+        limits["display"] = {
+            "file_size": limits["file_size_display"],
+            "duration": limits["duration_display"],
         }
 
         return {"user_id": user_id, "subscription": subscription_data, "limits": limits}

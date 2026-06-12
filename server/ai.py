@@ -139,8 +139,8 @@ async def ask_question(question: Question):
 
         try:
             response = anthropic.messages.create(
-                model="claude-3-sonnet-20240229",
-                max_tokens=1000,
+                model="claude-opus-4-8",
+                max_tokens=4096,
                 system=(
                     "You are a helpful AI assistant named Scribe. You take a transcription "
                     "in for a video or audio file and you answer questions if the user has "

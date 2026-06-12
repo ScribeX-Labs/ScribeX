@@ -1,21 +1,19 @@
-# Base image for development
-FROM node:18-alpine AS dev
+FROM oven/bun:1 AS deps
 WORKDIR /app
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
 
-# Install pnpm globally
-RUN npm install -g pnpm
-
-# Copy package.json and pnpm-lock.yaml to install dependencies
-COPY package.json pnpm-lock.yaml ./
-
-# Install all dependencies including devDependencies
-RUN pnpm install
-
-# Copy all source code
+FROM oven/bun:1 AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN bun run build
 
-# Expose Next.js dev server port
+FROM oven/bun:1 AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 EXPOSE 3000
-
-# Run the Next.js app in development mode with hot-reloading
-CMD ["pnpm", "run", "dev"]
+CMD ["bun", "server.js"]

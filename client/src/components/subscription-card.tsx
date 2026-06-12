@@ -1,115 +1,60 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Crown, Info, Sparkles, Zap, Clock, FileUp, RotateCcw } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useEffect, useState } from 'react';
+import { Clock, HardDrive, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
-import { Skeleton } from './ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/context/auth-context';
+import { api, type SubscriptionInfo } from '@/lib/api';
 
-interface Subscription {
-  tier: string;
-  is_active: boolean;
-  created_at?: any;
-  updated_at?: any;
-}
-
-interface SubscriptionLimits {
-  file_size: number;
-  duration: number;
-  file_size_display: string;
-  duration_display: string;
-}
-
-interface SubscriptionData {
-  user_id: string;
-  subscription: Subscription;
-  limits: SubscriptionLimits;
-}
-
-// Default free tier limits to show if the API fails
-const DEFAULT_FREE_TIER = {
-  user_id: '',
-  subscription: {
-    tier: 'free',
-    is_active: true,
-  },
-  limits: {
-    file_size: 500 * 1024 * 1024, // 500 MB
-    duration: 120, // 2 minutes
-    file_size_display: '500 MB',
-    duration_display: '2 minutes',
-  },
-};
-
-export default function SubscriptionCard() {
+export function SubscriptionCard() {
   const { user } = useAuth();
-  const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
+  const [info, setInfo] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-
-    const fetchSubscription = async () => {
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/subscriptions/${user.uid}`,
-        );
-        if (response.ok) {
-          const data = await response.json();
-          setSubscriptionData(data);
-        } else {
-          console.error('Failed to fetch subscription data');
-          // Set default free tier data if the API fails
-          setSubscriptionData({
-            ...DEFAULT_FREE_TIER,
-            user_id: user.uid,
-          });
-        }
-      } catch (error) {
-        console.error('Error fetching subscription data:', error);
-        // Set default free tier data if the API fails
-        setSubscriptionData({
-          ...DEFAULT_FREE_TIER,
-          user_id: user.uid,
-        });
-      } finally {
-        setLoading(false);
-      }
+    let cancelled = false;
+    api
+      .getSubscription(user.uid)
+      .then((data) => {
+        if (!cancelled) setInfo(data);
+      })
+      .catch(() => {
+        if (!cancelled) toast.error('Could not load subscription');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
     };
-
-    fetchSubscription();
   }, [user]);
 
-  const handleUpgradeClick = async () => {
+  const handleUpgrade = async () => {
     if (!user) return;
-
     setUpgrading(true);
     try {
-      // In a real application, this would redirect to a payment processor
-      // For demo purposes, we'll just call the API directly
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/subscriptions/${user.uid}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ tier: 'pro' }),
+      const idToken = await user.getIdToken();
+      await api.setSubscription(user.uid, 'pro', idToken);
+      toast.success('Welcome to Pro', {
+        description: 'Bigger files, longer recordings — go wild.',
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSubscriptionData(data);
-        toast.success('Upgraded to Pro tier successfully!');
-      } else {
-        toast.error('Failed to upgrade subscription');
-      }
+      setInfo(await api.getSubscription(user.uid));
     } catch (error) {
-      console.error('Error upgrading subscription:', error);
-      toast.error('An error occurred while upgrading');
+      toast.error('Upgrade failed', {
+        description: error instanceof Error ? error.message : undefined,
+      });
     } finally {
       setUpgrading(false);
     }
@@ -117,147 +62,63 @@ export default function SubscriptionCard() {
 
   if (loading) {
     return (
-      <Card className="w-full border-2">
+      <Card>
         <CardHeader>
-          <Skeleton className="h-7 w-40" />
-          <Skeleton className="h-4 w-64" />
+          <Skeleton className="h-6 w-36" />
+          <Skeleton className="h-4 w-52" />
         </CardHeader>
-        <CardContent className="space-y-6">
-          <Skeleton className="h-4 w-32" />
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-16" />
-            </div>
-            <div className="flex justify-between">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-16" />
-            </div>
-          </div>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
         </CardContent>
-        <CardFooter>
-          <Skeleton className="h-10 w-full" />
-        </CardFooter>
       </Card>
     );
   }
 
-  if (!subscriptionData) {
-    return (
-      <Card className="w-full border-2">
-        <CardHeader>
-          <CardTitle>Subscription</CardTitle>
-          <CardDescription>Unable to load subscription information</CardDescription>
-        </CardHeader>
-        <CardFooter>
-          <Button onClick={() => window.location.reload()} className="gap-2 rounded-full">
-            <RotateCcw className="h-4 w-4" />
-            Retry
-          </Button>
-        </CardFooter>
-      </Card>
-    );
-  }
+  if (!info) return null;
 
-  const isPro = subscriptionData.subscription.tier === 'pro';
+  const isPro = info.subscription.tier === 'pro';
 
   return (
-    <Card
-      className={`w-full overflow-hidden border-2 ${isPro ? 'border-primary/50' : 'border-border'}`}
-    >
-      <div
-        className={`absolute -right-20 -top-20 h-40 w-40 rounded-full ${isPro ? 'bg-primary/20' : 'bg-secondary/10'} blur-3xl`}
-      ></div>
-      <CardHeader className={isPro ? 'bg-primary/10' : ''}>
+    <Card className={isPro ? 'border-primary/40' : ''}>
+      <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center">
-            {isPro ? (
-              <Crown className="mr-2 h-5 w-5 text-primary" />
-            ) : (
-              <Sparkles className="mr-2 h-5 w-5 text-secondary" />
-            )}
-            {isPro ? 'Pro Subscription' : 'Free Tier'}
-          </CardTitle>
-          {isPro && (
-            <div className="rounded-full bg-primary px-3 py-1 text-xs font-medium text-primary-foreground">
-              Active
-            </div>
-          )}
+          <CardTitle className="font-display">Subscription</CardTitle>
+          <Badge variant={isPro ? 'default' : 'secondary'} className="rounded-full uppercase">
+            {info.subscription.tier}
+          </Badge>
         </div>
         <CardDescription>
           {isPro
-            ? 'Enjoy unlimited transcription capabilities'
-            : 'Upgrade to unlock unlimited transcriptions'}
+            ? 'You’re on Pro — the full ScribeX experience.'
+            : 'You’re on the free plan. Pro unlocks longer recordings.'}
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-6">
-        <h3 className="mb-4 text-sm font-medium">Your current limits:</h3>
-        <div className="space-y-5">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                <FileUp className="h-4 w-4 text-primary" />
-              </div>
-              <span className="ml-2 text-sm">Max file size</span>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="ml-1 h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Maximum size of audio/video files you can upload</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-lg border bg-muted/40 p-3">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <HardDrive className="h-4 w-4" />
+              <span className="text-xs">Max file size</span>
             </div>
-            <span className="font-medium">{subscriptionData.limits.file_size_display}</span>
+            <p className="mt-1 font-mono text-lg font-bold">{info.limits.display.file_size}</p>
           </div>
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                <Clock className="h-4 w-4 text-primary" />
-              </div>
-              <span className="ml-2 text-sm">Max duration</span>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="ml-1 h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Maximum length of audio/video files you can transcribe</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+          <div className="rounded-lg border bg-muted/40 p-3">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              <span className="text-xs">Max duration</span>
             </div>
-            <span className="font-medium">{subscriptionData.limits.duration_display}</span>
+            <p className="mt-1 font-mono text-lg font-bold">{info.limits.display.duration}</p>
           </div>
         </div>
-      </CardContent>
-      <Separator />
-      <CardFooter className="flex justify-center pt-5">
-        {!isPro ? (
-          <Button
-            className="button-glow w-full gap-2 rounded-full"
-            onClick={handleUpgradeClick}
-            disabled={upgrading}
-          >
-            {upgrading ? (
-              <RotateCcw className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Zap className="h-4 w-4" />
-            )}
-            {upgrading ? 'Processing...' : 'Upgrade to Pro'}
+
+        {!isPro && (
+          <Button className="press w-full" onClick={handleUpgrade} disabled={upgrading}>
+            {upgrading ? <Loader2 className="animate-spin" /> : <Sparkles />}
+            Upgrade to Pro
           </Button>
-        ) : (
-          <div className="text-center">
-            <div className="mb-2 flex items-center justify-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <p className="text-sm font-medium text-primary">Pro Features Active</p>
-            </div>
-            <p className="text-xs text-muted-foreground">Thank you for being a Pro subscriber!</p>
-          </div>
         )}
-      </CardFooter>
+      </CardContent>
     </Card>
   );
-} 
+}
